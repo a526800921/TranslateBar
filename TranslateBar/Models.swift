@@ -41,6 +41,14 @@ struct APIErrorDetail: Decodable {
     let type: String?
 }
 
+struct ModelListResponse: Decodable {
+    let data: [ModelItem]
+}
+
+struct ModelItem: Decodable {
+    let id: String
+}
+
 enum TranslationMode: String, CaseIterable, Identifiable {
     case auto = "自动"
     case zhToEn = "中译英"

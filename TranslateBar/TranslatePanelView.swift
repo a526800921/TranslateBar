@@ -4,6 +4,7 @@ import SwiftUI
 struct TranslatePanelView: View {
     @StateObject private var service = TranslationService()
     @StateObject private var loginItemService = LoginItemService()
+    @StateObject private var modelListService = ModelListService()
     @AppStorage(TranslationConfiguration.Keys.endpoint) private var endpoint = TranslationConfiguration.defaultEndpoint
     @AppStorage(TranslationConfiguration.Keys.model) private var model = TranslationConfiguration.defaultModel
     @State private var inputText = ""
@@ -12,24 +13,36 @@ struct TranslatePanelView: View {
     @State private var showsSettings = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            if showsSettings {
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(spacing: 0) {
+                header
+                if showsSettings {
+                    Divider()
+                    settingsArea
+                }
                 Divider()
-                settingsArea
+                inputArea
+                Divider()
+                resultArea
             }
-            Divider()
-            inputArea
-            Divider()
-            resultArea
+            .frame(width: 420)
         }
         .frame(width: 420, height: 520)
+        .clipped()
     }
 
     // MARK: - Header
 
     private var header: some View {
         HStack(spacing: 8) {
+            Button {
+                showsSettings.toggle()
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.borderless)
+            .help("设置")
+
             Toggle("自动翻译", isOn: $autoTranslate)
                 .toggleStyle(.switch)
 
@@ -45,18 +58,16 @@ struct TranslatePanelView: View {
                 }
             }
 
-            Button("退出") {
-                NSApp.terminate(nil)
-            }
-            .buttonStyle(.borderless)
+            Spacer()
 
             Button {
-                showsSettings.toggle()
+                NSApp.terminate(nil)
             } label: {
-                Image(systemName: "gearshape")
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.borderless)
-            .help("设置")
+            .help("退出")
         }
         .padding(12)
     }
@@ -96,11 +107,48 @@ struct TranslatePanelView: View {
                 Text("模型路径")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                TextField(
-                    "/Users/jafish/Documents/models/Hy-MT2-7B-4bit",
-                    text: $model
-                )
-                .textFieldStyle(.roundedBorder)
+
+                HStack(spacing: 4) {
+                    if modelListService.models.isEmpty {
+                        TextField(
+                            "/Users/jafish/Documents/models/Hy-MT2-7B-4bit",
+                            text: $model
+                        )
+                        .textFieldStyle(.roundedBorder)
+                    } else {
+                        Picker("", selection: $model) {
+                            ForEach(modelListService.models, id: \.self) { modelId in
+                                Text(modelId).tag(modelId)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    Button {
+                        Task { await modelListService.fetchModels() }
+                    } label: {
+                        if modelListService.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.65)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(modelListService.isLoading)
+                    .help("刷新模型列表")
+                }
+
+                if let error = modelListService.errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            .onAppear {
+                Task { await modelListService.fetchModels() }
             }
 
             Divider()
@@ -216,20 +264,18 @@ struct TranslatePanelView: View {
                     Text("翻译结果将显示在这里")
                         .foregroundStyle(.tertiary)
                 } else {
-                    ScrollView {
-                        Text(service.result)
-                            .frame(
-                                maxWidth: .infinity,
-                                alignment: .leading
-                            )
-                            .textSelection(.enabled)
-                    }
+                    Text(service.result)
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .leading
+                        )
+                        .textSelection(.enabled)
                 }
             }
             .font(.system(size: 14))
             .frame(
                 maxWidth: .infinity,
-                maxHeight: .infinity,
+                minHeight: 100,
                 alignment: .topLeading
             )
         }
