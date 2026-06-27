@@ -34,7 +34,7 @@ struct TranslatePanelView: View {
 
     // MARK: - Header
 
-    private var header: some View {
+    var header: some View {
         HStack(spacing: 8) {
             Button {
                 showsSettings.toggle()
@@ -69,7 +69,7 @@ struct TranslatePanelView: View {
 
     // MARK: - Settings Area
 
-    private var settingsArea: some View {
+    var settingsArea: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("服务设置")
@@ -185,7 +185,7 @@ struct TranslatePanelView: View {
 
     // MARK: - Input Area
 
-    private var inputArea: some View {
+    var inputArea: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("输入")
@@ -232,7 +232,7 @@ struct TranslatePanelView: View {
 
     // MARK: - Result Area
 
-    private var resultArea: some View {
+    var resultArea: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("翻译结果")

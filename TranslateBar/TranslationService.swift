@@ -8,6 +8,11 @@ final class TranslationService: ObservableObject {
 
     private var currentTask: Task<Void, Never>?
     private var currentTranslateId: UUID?
+    private let session: URLSessionProtocol
+
+    init(session: URLSessionProtocol = URLSession.shared) {
+        self.session = session
+    }
 
     func translate(text: String, mode: TranslationMode) {
         currentTask?.cancel()
@@ -105,7 +110,7 @@ final class TranslationService: ObservableObject {
 
         request.httpBody = try JSONEncoder().encode(payload)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard currentTranslateId == id else { return }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -156,7 +161,7 @@ final class TranslationService: ObservableObject {
 
         request.httpBody = try JSONEncoder().encode(payload)
 
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        let (byteStream, response) = try await session.bytesStream(for: request)
         guard currentTranslateId == id else { return }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -165,7 +170,7 @@ final class TranslationService: ObservableObject {
 
         guard (200..<300).contains(httpResponse.statusCode) else {
             var errorBody = Data()
-            for try await byte in bytes {
+            for try await byte in byteStream {
                 errorBody.append(byte)
                 if errorBody.count >= 500 { break }
             }
@@ -179,7 +184,7 @@ final class TranslationService: ObservableObject {
         guard currentTranslateId == id else { return }
         result = ""
 
-        for try await line in bytes.lines {
+        for try await line in lines(from: byteStream) {
             guard currentTranslateId == id else { return }
 
             if line.hasPrefix(":") { continue }
@@ -205,7 +210,7 @@ final class TranslationService: ObservableObject {
         }
     }
 
-    private func makePrompt(text: String, mode: TranslationMode) -> String {
+    func makePrompt(text: String, mode: TranslationMode) -> String {
         let target = mode.targetDescription(for: text)
 
         return """
@@ -216,7 +221,7 @@ final class TranslationService: ObservableObject {
         """
     }
 
-    private func parseErrorMessage(from data: Data) -> String {
+    func parseErrorMessage(from data: Data) -> String {
         if let apiError = try? JSONDecoder().decode(APIErrorResponse.self, from: data),
            let message = apiError.error?.message,
            !message.isEmpty {
@@ -226,8 +231,8 @@ final class TranslationService: ObservableObject {
         return String(data: data, encoding: .utf8)?.prefix(500).description ?? "Unknown error"
     }
 
-    private func makeConfiguration() throws -> TranslationConfiguration {
-        let configuration = TranslationConfiguration.current()
+    func makeConfiguration(defaults: UserDefaults = .standard) throws -> TranslationConfiguration {
+        let configuration = TranslationConfiguration.current(defaults: defaults)
 
         if configuration.endpointString.isEmpty {
             throw TranslationError.invalidEndpoint(configuration.endpointString)
@@ -240,7 +245,34 @@ final class TranslationService: ObservableObject {
         return configuration
     }
 
-    private func readableError(_ error: Error) -> String {
+    /// 将字节流按换行符拆分为字符串行
+    private func lines(from stream: AsyncThrowingStream<UInt8, any Error>) -> AsyncThrowingStream<String, any Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                var buffer = Data()
+                do {
+                    for try await byte in stream {
+                        if byte == 0x0A { // \n
+                            if let line = String(data: buffer, encoding: .utf8) {
+                                continuation.yield(line)
+                            }
+                            buffer = Data()
+                        } else {
+                            buffer.append(byte)
+                        }
+                    }
+                    if !buffer.isEmpty, let line = String(data: buffer, encoding: .utf8) {
+                        continuation.yield(line)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
+
+    func readableError(_ error: Error) -> String {
         if let translationError = error as? TranslationError {
             return translationError.localizedDescription
         }

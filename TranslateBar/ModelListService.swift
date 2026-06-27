@@ -6,6 +6,12 @@ final class ModelListService: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
+    private let session: URLSessionProtocol
+
+    init(session: URLSessionProtocol = URLSession.shared) {
+        self.session = session
+    }
+
     func fetchModels() async {
         isLoading = true
         errorMessage = nil
@@ -22,7 +28,7 @@ final class ModelListService: ObservableObject {
             var request = URLRequest(url: modelsURL)
             request.timeoutInterval = 30
 
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await session.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 errorMessage = "无法连接模型列表服务。"

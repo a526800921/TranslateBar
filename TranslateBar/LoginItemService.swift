@@ -7,6 +7,12 @@ final class LoginItemService: ObservableObject {
     @Published var isEnabled = false
     @Published var statusMessage: String?
 
+    private let service: SMAppServiceProtocol
+
+    init(service: SMAppServiceProtocol = SMAppService.mainApp) {
+        self.service = service
+    }
+
     enum LoginItemError: LocalizedError {
         case registerFailed(String)
         case unregisterFailed(String)
@@ -26,7 +32,7 @@ final class LoginItemService: ObservableObject {
 
     /// 读取当前登录项状态并更新 isEnabled
     func refresh() {
-        let status = SMAppService.mainApp.status
+        let status = service.status
         switch status {
         case .enabled:
             isEnabled = true
@@ -58,7 +64,7 @@ final class LoginItemService: ObservableObject {
     /// 启用登录项
     func enable() {
         do {
-            try SMAppService.mainApp.register()
+            try service.register()
             refresh()
         } catch {
             statusMessage = LoginItemError.registerFailed(
@@ -71,7 +77,7 @@ final class LoginItemService: ObservableObject {
     /// 关闭登录项
     func disable() {
         do {
-            try SMAppService.mainApp.unregister()
+            try service.unregister()
             refresh()
         } catch {
             statusMessage = LoginItemError.unregisterFailed(
