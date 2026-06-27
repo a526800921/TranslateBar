@@ -132,7 +132,7 @@ Phase 0-3 已完成（2026-06-27）。
 - **增量文本字段路径**：`choices[0].delta.content`（流式传输中每 chunk 的增量文本；最终 chunk 的 `finish_reason` 从 `null` 变为 `"stop"`，`delta` 中无 `content`）
 - **结束标记**：`data: [DONE]`（标准 OpenAI SSE 结束标记）
 - **keepalive 注释**：`: keepalive` 行在等待首 token 前出现，需 parser 跳过以 `:` 开头的注释行
-- **服务错误样本**：待补（当前服务可用，后续模拟不可用场景记录）
+- **服务错误样本**：已知限制（本地服务始终可用，暂无法模拟错误场景；非流式 fallback 已保留，流式失败会显示可读错误并可关闭开关回退）
 
 ## 验证
 

@@ -113,7 +113,7 @@ Phase 0-3 已完成（2026-06-27）。
   ```
 - **响应中模型 id 路径**：`data[].id`（数组内每个元素的 `id` 字段即为模型标识）
 - **endpoint 推导规则**：chat endpoint 形如 `http://host:port/v1/chat/completions` → models endpoint = `http://host:port/v1/models`
-- **服务不可用时的错误行为**：待补（当前服务可用，后续模拟不可用场景记录）
+- **服务不可用时的错误行为**：已知限制（本地服务始终可用，暂无法模拟不可用场景；代码已实现可读错误信息 fallback）
 
 ## 验证
 
