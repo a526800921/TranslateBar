@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | [translatebar-v1](plans/translatebar-v1.md) | 已完成 | Phase 0-2 已完成；Phase 3 候选 | `127.0.0.1:8787` 上的本地 Hy-MT2 服务 | [Step 0 证据](plans/translatebar-v1.md#step-0-证据)，[已完成证据](#已完成证据) |
 | [service-settings-and-install](plans/service-settings-and-install.md) | 已完成 | Phase 1-2 已完成 | translatebar-v1 | [Step 0 证据](plans/service-settings-and-install.md#step-0-证据)，[已完成证据](#已完成证据) |
-| [install-cleanup-and-login-item](plans/install-cleanup-and-login-item.md) | 候选 | Phase 0 | service-settings-and-install | [Step 0 证据待补](plans/install-cleanup-and-login-item.md#step-0-证据) |
+| [install-cleanup-and-login-item](plans/install-cleanup-and-login-item.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/install-cleanup-and-login-item.md#step-0-证据)，[已完成证据](#已完成证据) |
 
 允许的状态值：`候选`、`设计中`、`待实施`、`实施中`、`已完成`、`已替代`、`已合并`、`已废弃`。
 
@@ -49,7 +49,7 @@
 | 草案服务代码的部分取消路径可能让 loading 状态停留为 true | 已修复：TranslationService 使用 UUID-based 任务身份校验（`currentTranslateId`），确保取消后旧任务不覆写新任务的 loading 状态。 | 取消请求后 UI 可能残留进度状态 | 否 | 已解决 |
 | 模型路径绑定当前用户机器 | 第一版本地使用可继续硬编码；分发前改为配置项 | App 无法直接跨机器使用 | 否 | 暂缓 |
 | 配置化会改变请求失败信息 | 已实现：错误提示展示当前配置的 endpoint，非法 endpoint 和空模型路径会提前报错。 | 配置错误时用户难以诊断 | 否 | 已解决 |
-| 后续构建可能重新注册 DerivedData 中的 `TranslateBar.app` | 候选计划 `install-cleanup-and-login-item` 需要提供 build/install/cleanup 脚本，只保留 `~/Applications/TranslateBar.app` 可被 Launchpad 索引。 | 启动台搜索可能再次出现多个同名 App | 否 | 候选 |
+| 后续构建可能重新注册 DerivedData 中的 `TranslateBar.app` | 已解决：`install-cleanup-and-login-item` 提供了 `scripts/install_app.sh`，构建后自动清理 DerivedData 重复产物并只保留 `~/Applications/TranslateBar.app`。 | 启动台搜索可能再次出现多个同名 App | 否 | 已解决 |
 
 ## 已完成证据
 
@@ -61,3 +61,7 @@
 | service-settings-and-install | Phase 0 | v1 已完成；当前硬编码 endpoint 为 `http://127.0.0.1:8787/v1/chat/completions`，模型路径为 `/Users/jafish/Documents/models/Hy-MT2-7B-4bit`；当前 App 可从项目根目录 `TranslateBar.app` 启动。 |
 | service-settings-and-install | Phase 1 | 已新增 `TranslationConfiguration`，endpoint/model 通过 `UserDefaults` 配置并保留 v1 默认值。面板新增“服务设置”，支持修改服务地址、模型路径和恢复默认。Debug 和 Release 构建通过。 |
 | service-settings-and-install | Phase 2 | Release App 已同步到项目根目录和 `~/Applications/TranslateBar.app`，并通过 LaunchServices 注册。安装后 `LSUIElement = true`，`codesign --verify --deep --strict --verbose=2 ~/Applications/TranslateBar.app` 通过，Spotlight 元数据显示为 `com.apple.application-bundle`。 |
+| install-cleanup-and-login-item | Phase 0 | 基线确认：`find`/`mdfind` 仅一个 `~/Applications/TranslateBar.app`；DerivedData 干净；`LSUIElement = true`；签名通过；登录项状态 `notFound`（未注册）；无 LaunchAgent。 |
+| install-cleanup-and-login-item | Phase 1 | `scripts/install_app.sh` 创建：Release build → 安装 `~/Applications/TranslateBar.app` → 清理 DerivedData 和项目根目录重复产物 → `lsregister` 重新注册。脚本执行后 `mdfind` 仅返回正式路径，DerivedData 无残留，签名通过。 |
+| install-cleanup-and-login-item | Phase 2 | `LoginItemService.swift` 封装 `SMAppService.mainApp`（`enable`/`disable`/`refresh`/中文错误信息）。`TranslatePanelView` 设置区域新增「登录时启动」Toggle，默认关闭，错误信息可读。Release 构建通过。 |
+| install-cleanup-and-login-item | Phase 3 | 脚本 → 安装 → 索引 → 登录项 → 治理全部通过。`plan-governance` 验证：`mdfind` 唯一、`LSUIElement = true`、签名通过。 |

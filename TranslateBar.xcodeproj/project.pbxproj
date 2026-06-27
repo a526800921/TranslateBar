@@ -14,6 +14,7 @@
 		31D0179641ED4C0C9A3B8DFE /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118F2511D8ED4FBEA91AB7C5 /* Models.swift */; };
 		812692317520472BB581EB18 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F11E705CDD545769F93C363 /* Assets.xcassets */; };
 		160ED9DB0D6D42EEAD6C2E4F /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 20C79D4189BE4EFDAD937056 /* AppIcon.icns */; };
+		06B16DA5765D4B858DF50A29 /* LoginItemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB463342B83470AB555B318 /* LoginItemService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +28,7 @@
 		54EB8B12AD7848A8B41AEE4D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B21FD1FDEE0B49B9ABD056D9 /* TranslateBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TranslateBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		20C79D4189BE4EFDAD937056 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		0CB463342B83470AB555B318 /* LoginItemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -47,6 +49,7 @@
 				12FE83C9E62145B795D8AA56 /* TranslationService.swift */,
 				09F5927449E6465E9F6321BB /* TranslationConfiguration.swift */,
 				118F2511D8ED4FBEA91AB7C5 /* Models.swift */,
+				0CB463342B83470AB555B318 /* LoginItemService.swift */,
 				2F11E705CDD545769F93C363 /* Assets.xcassets */,
 				54EB8B12AD7848A8B41AEE4D /* Info.plist */,
 			
@@ -127,6 +130,7 @@
 				E39AB84FA8F5473A8A40C935 /* TranslationService.swift in Sources */,
 				44D9796C8B764A59B5A37D1A /* TranslationConfiguration.swift in Sources */,
 				31D0179641ED4C0C9A3B8DFE /* Models.swift in Sources */,
+				06B16DA5765D4B858DF50A29 /* LoginItemService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

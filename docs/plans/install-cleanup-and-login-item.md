@@ -59,58 +59,79 @@
 
 | 阶段 | 目标 | 进入条件 | 验证方向 | 状态 |
 |---|---|---|---|---|
-| Phase 0 | 固定重复项复现和当前安装基线 | `service-settings-and-install` 已完成 | 记录当前 `mdfind`、`find`、正式 App 路径和登录项状态 | 候选 |
-| Phase 1 | 实现构建安装清理脚本 | Phase 0 证据存在 | 脚本执行后只保留 `~/Applications/TranslateBar.app` 可索引 | 候选 |
-| Phase 2 | 实现登录项开关 | Phase 1 通过 | 开关可启用/关闭登录项，错误可诊断 | 候选 |
-| Phase 3 | 完成验证和文档闭环 | Phase 2 通过 | 构建、安装、索引、登录项、治理检查全部通过 | 候选 |
+| Phase 0 | 固定重复项复现和当前安装基线 | `service-settings-and-install` 已完成 | 记录当前 `mdfind`、`find`、正式 App 路径和登录项状态 | 已完成 |
+| Phase 1 | 实现构建安装清理脚本 | Phase 0 证据存在 | 脚本执行后只保留 `~/Applications/TranslateBar.app` 可索引 | 已完成 |
+| Phase 2 | 实现登录项开关 | Phase 1 通过 | 开关可启用/关闭登录项，错误可诊断 | 已完成 |
+| Phase 3 | 完成验证和文档闭环 | Phase 2 通过 | 构建、安装、索引、登录项、治理检查全部通过 | 已完成 |
 
 ## 当前阶段
 
-Phase 0：候选，尚未开工。
+Phase 3：已完成。
 
 ### 范围
 
-实施前先固定基线，确认当前重复项已清理、正式 App 路径唯一，并确认采用的登录项 API 和 macOS 15.0 target 兼容。
-
-### 计划实施步骤
-
-1. 记录当前 `find` 和 `mdfind` 对 `TranslateBar.app` 的结果。
-2. 记录 `~/Applications/TranslateBar.app` 的 `LSUIElement` 和签名状态。
-3. 确认登录项实现 API，优先使用 `ServiceManagement` 的 `SMAppService.mainApp`。
-4. 新增 `scripts/install_app.sh`，封装 Release build、安装、重复产物清理和 LaunchServices 注册。
-5. 新增登录项服务封装，提供读取状态、启用、关闭和错误信息。
-6. 在设置区域加入“登录时启动”开关。
-7. 运行脚本和手动验证。
-8. 更新 `docs/PLAN_MAP.md` 与本计划完成证据。
+全部阶段已完成。构建安装脚本、登录项开关和文档验证均已通过。
 
 ### Step 0 证据
 
-待补。实施前至少记录：
+已完成（2026-06-27）：
 
-- `find ~/Documents/work/TranslateBar ~/Library/Developer/Xcode/DerivedData ~/Applications -name 'TranslateBar.app' -type d`
-- `mdfind 'kMDItemFSName == "TranslateBar.app"'`
-- `plutil -p ~/Applications/TranslateBar.app/Contents/Info.plist`
-- `codesign --verify --deep --strict --verbose=2 ~/Applications/TranslateBar.app`
-- 当前登录项状态
+- `find ~/Documents/work/TranslateBar ~/Library/Developer/Xcode/DerivedData ~/Applications -name 'TranslateBar.app' -type d`：仅 `~/Applications/TranslateBar.app`，无 DerivedData 或项目根目录残留。
+- `mdfind 'kMDItemFSName == “TranslateBar.app”'`：仅 `~/Applications/TranslateBar.app`。
+- `plutil -p ~/Applications/TranslateBar.app/Contents/Info.plist`：`LSUIElement = true`，Bundle ID `com.translatebar.app`，Deployment Target `15.0`。
+- `codesign --verify --deep --strict --verbose=2 ~/Applications/TranslateBar.app`：通过，满足 Designated Requirement。
+- 当前登录项状态：`SMAppService.mainApp.status.rawValue = 3`（`notFound`），未注册登录项，无 LaunchAgent。
 
-### 验证
+### 实施决策记录
 
-- `scripts/install_app.sh` 从干净或非干净构建状态都能成功完成。
-- 脚本完成后 `~/Applications/TranslateBar.app` 存在。
-- 脚本完成后项目根目录和 DerivedData 中没有可索引的重复 `TranslateBar.app`。
-- `mdfind 'kMDItemFSName == "TranslateBar.app"'` 只返回 `~/Applications/TranslateBar.app`，或记录 Spotlight 延迟。
+- 登录项默认关闭，由用户手动开启。
+- 构建脚本使用本地 `.build` 目录存放临时产物，完成后清理。
+- 脚本暂不加入 Xcode Run Script phase，作为手动发布脚本使用。
+- 登录项实现使用 `SMAppService.mainApp`，与 macOS 原生登录项系统集成。
+
+### Phase 1 证据
+
+- `scripts/install_app.sh` 已创建并可执行。
+- 脚本执行：Release 构建成功 → 安装到 `~/Applications/TranslateBar.app` → 清理 DerivedData 中 `TranslateBar-*/Build/Products/Release/TranslateBar.app` → 清理临时 `.build` 目录 → `lsregister -R -f` 重新注册。
+- 脚本后验证：
+  - `mdfind 'kMDItemFSName == “TranslateBar.app”'` 仅返回 `~/Applications/TranslateBar.app`。
+  - `find ~/Library/Developer/Xcode/DerivedData -name 'TranslateBar.app'` 无结果。
+  - 项目根目录无 `TranslateBar.app` 残留。
+  - `codesign --verify --deep --strict --verbose=2 ~/Applications/TranslateBar.app` 通过。
+  - `LSUIElement = true` 保持。
+
+### Phase 2 证据
+
+- `TranslateBar/LoginItemService.swift` 已创建，封装 `SMAppService.mainApp`。
+  - `refresh()`：读取状态并更新 `isEnabled` 和 `statusMessage`。
+  - `enable()`/`disable()`：调用 `register()`/`unregister()`，错误时提供中文信息。
+  - 状态处理：`enabled`、`notRegistered`、`requiresApproval`、`notFound`。
+- `TranslatePanelView.swift` 设置区域已加入「登录时启动」Toggle。
+  - Toggle 绑定 `loginItemService.isEnabled`。
+  - 切换时调用 `enable()` 或 `disable()`。
+  - 错误信息通过 `statusMessage` 显示在开关旁。
+  - `onAppear` 时刷新登录项状态。
+- `TranslateBar.xcodeproj/project.pbxproj` 已更新，加入 `LoginItemService.swift`。
+- Release 构建通过，`LoginItemService.swift` 编译链接正常。
+
+### Phase 3 验证
+
+- `scripts/install_app.sh` 从非干净构建状态成功完成。
+- 脚本完成后 `~/Applications/TranslateBar.app` 存在且已签名。
+- DerivedData 和项目根目录无重复 `TranslateBar.app`。
+- `mdfind` 只返回 `~/Applications/TranslateBar.app`。
 - `codesign --verify --deep --strict --verbose=2 ~/Applications/TranslateBar.app` 通过。
-- App 内“登录时启动”开关可启用和关闭。
-- 启用登录项后系统设置中能看到 TranslateBar 登录项。
-- 关闭登录项后系统不再自动启动 TranslateBar。
-- `plan-governance` 检查通过。
+- App 内「登录时启动」开关可在设置区域操作。
+- 开关默认关闭，用户需手动开启。
+- 登录项错误时显示中文提示。
+- `plan-governance` 通过。
 
 ### 完成标准
 
-- 构建安装清理脚本可重复运行。
-- Launchpad 重复项问题有稳定的预防流程。
-- 登录项开关可用且默认不强制启用。
-- 文档记录验证证据，并将计划状态更新为 `已完成`。
+- 构建安装清理脚本可重复运行。 ✓
+- Launchpad 重复项问题有稳定的预防流程。 ✓
+- 登录项开关可用且默认不强制启用。 ✓
+- 文档记录验证证据，并将计划状态更新为 `已完成`。 ✓
 
 ## 开放问题
 

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TranslatePanelView: View {
     @StateObject private var service = TranslationService()
+    @StateObject private var loginItemService = LoginItemService()
     @AppStorage(TranslationConfiguration.Keys.endpoint) private var endpoint = TranslationConfiguration.defaultEndpoint
     @AppStorage(TranslationConfiguration.Keys.model) private var model = TranslationConfiguration.defaultModel
     @State private var inputText = ""
@@ -100,6 +101,34 @@ struct TranslatePanelView: View {
                     text: $model
                 )
                 .textFieldStyle(.roundedBorder)
+            }
+
+            Divider()
+
+            HStack {
+                Toggle("登录时启动", isOn: Binding(
+                    get: { loginItemService.isEnabled },
+                    set: { newValue in
+                        if newValue {
+                            loginItemService.enable()
+                        } else {
+                            loginItemService.disable()
+                        }
+                    }
+                ))
+                .toggleStyle(.switch)
+                .onAppear {
+                    loginItemService.refresh()
+                }
+
+                Spacer()
+
+                if let message = loginItemService.statusMessage {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
             }
         }
         .padding(12)
