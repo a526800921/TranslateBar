@@ -1,0 +1,8 @@
+.DS_Store
+*.log
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.app/
+*.dSYM/
+AppIcon.iconset/

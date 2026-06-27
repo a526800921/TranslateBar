@@ -1,0 +1,63 @@
+# PLAN_MAP
+
+## 治理范围
+
+本文件跟踪 TranslateBar 的阶段性交付。TranslateBar 是一个 macOS 菜单栏翻译 App，通过本地 OpenAI Chat Completions 兼容服务调用 Hy-MT2-7B-4bit 模型。
+
+普通一次性修改不进入这里。以下情况需要新增或更新条目：工作跨阶段推进、改变本地 API 契约、改变 App 打包或启动行为、使现有验证证据失效。
+
+## 计划索引
+
+| 计划 | 状态 | 当前阶段 | 依赖 | 证据 |
+|---|---|---|---|---|
+| [translatebar-v1](plans/translatebar-v1.md) | 已完成 | Phase 0-2 已完成；Phase 3 候选 | `127.0.0.1:8787` 上的本地 Hy-MT2 服务 | [Step 0 证据](plans/translatebar-v1.md#step-0-证据)，[已完成证据](#已完成证据) |
+| [service-settings-and-install](plans/service-settings-and-install.md) | 已完成 | Phase 1-2 已完成 | translatebar-v1 | [Step 0 证据](plans/service-settings-and-install.md#step-0-证据)，[已完成证据](#已完成证据) |
+| [install-cleanup-and-login-item](plans/install-cleanup-and-login-item.md) | 候选 | Phase 0 | service-settings-and-install | [Step 0 证据待补](plans/install-cleanup-and-login-item.md#step-0-证据) |
+
+允许的状态值：`候选`、`设计中`、`待实施`、`实施中`、`已完成`、`已替代`、`已合并`、`已废弃`。
+
+## 推荐顺序
+
+1. `translatebar-v1`
+2. `service-settings-and-install`
+3. `install-cleanup-and-login-item`
+
+## 依赖关系
+
+| 计划 | 依赖 | 原因 |
+|---|---|---|
+| translatebar-v1 | 本地服务 `http://127.0.0.1:8787` | 第一版直接调用本地模型服务，不包含服务启动或模型管理。 |
+| translatebar-v1 | 模型 id `/Users/jafish/Documents/models/Hy-MT2-7B-4bit` | 服务会把短模型名当作 Hugging Face repo id 解析，因此 App 必须发送完整本地模型路径。 |
+| translatebar-v1 | macOS SwiftUI/AppKit 构建环境 | App 是原生 `LSUIElement` 菜单栏应用，使用 `NSStatusBar`、`NSPopover` 和 SwiftUI。 |
+| service-settings-and-install | translatebar-v1 | 配置化和安装流程建立在已完成的 v1 App 上。 |
+| install-cleanup-and-login-item | service-settings-and-install | 需要基于已安装到 `~/Applications/TranslateBar.app` 的单一正式产物实现构建清理和登录项。 |
+
+## 替换、合并与废弃
+
+| 计划 | 关系 | 目标 | 原因 |
+|---|---|---|---|
+| translatebar-v1 | 替代 | [TranslateBar.md](../TranslateBar.md) | 原始草案缺少已验证模型 id、明确响应路径、手动翻译模式和退出行为。 |
+| translatebar-v1 | 来源 | [TranslateBar.fixed.md](../TranslateBar.fixed.md) | fixed 草案是当前受治理计划的实现基线。 |
+| service-settings-and-install | 扩展 | [translatebar-v1](plans/translatebar-v1.md) | 将 v1 的硬编码服务配置改为用户可配置，并把 Release App 安装到用户应用目录。 |
+| install-cleanup-and-login-item | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 规范后续构建安装流程，避免 Launchpad 重复项，并补上登录项/开机自启动。 |
+
+## 当前阻塞项
+
+| 问题 | 建议处理 | 影响 | 是否阻塞当前阶段 | 状态 |
+|---|---|---|---|---|
+| SwiftUI `onChange` API 可用性取决于 deployment target | 已确定：macOS 15.0 target，使用两参数闭包语法 `{ _, newValue in }`，编译通过。 | 较旧 deployment target 下可能构建失败 | 否 | 已解决 |
+| 草案服务代码的部分取消路径可能让 loading 状态停留为 true | 已修复：TranslationService 使用 UUID-based 任务身份校验（`currentTranslateId`），确保取消后旧任务不覆写新任务的 loading 状态。 | 取消请求后 UI 可能残留进度状态 | 否 | 已解决 |
+| 模型路径绑定当前用户机器 | 第一版本地使用可继续硬编码；分发前改为配置项 | App 无法直接跨机器使用 | 否 | 暂缓 |
+| 配置化会改变请求失败信息 | 已实现：错误提示展示当前配置的 endpoint，非法 endpoint 和空模型路径会提前报错。 | 配置错误时用户难以诊断 | 否 | 已解决 |
+| 后续构建可能重新注册 DerivedData 中的 `TranslateBar.app` | 候选计划 `install-cleanup-and-login-item` 需要提供 build/install/cleanup 脚本，只保留 `~/Applications/TranslateBar.app` 可被 Launchpad 索引。 | 启动台搜索可能再次出现多个同名 App | 否 | 候选 |
+
+## 已完成证据
+
+| 计划 | 阶段 | 证据 |
+|---|---|---|
+| translatebar-v1 | Phase 0 | `TranslateBar.fixed.md` 记录了 `/v1/models` 和 `/v1/chat/completions` 探测成功、完整本地模型 id，以及响应路径 `choices[0].message.content`。 |
+| translatebar-v1 | Phase 1 | 构建成功（Debug，xcodebuild，arm64）。`LSUIElement = YES` 已确认。Project 使用 macOS 15.0 deployment target，Swift 5.0。手动验收 14/14 项全部通过（2026-06-27）。防抖 300ms。 |
+| translatebar-v1 | Phase 2 | Release 构建成功（arm64，378K）。`TranslateBar.app` 的 `LSUIElement = true` 已确认，`codesign --verify --deep --strict --verbose=2 TranslateBar.app` 通过。产物复制到项目根目录 `TranslateBar.app`。从项目目录启动验证通过。 |
+| service-settings-and-install | Phase 0 | v1 已完成；当前硬编码 endpoint 为 `http://127.0.0.1:8787/v1/chat/completions`，模型路径为 `/Users/jafish/Documents/models/Hy-MT2-7B-4bit`；当前 App 可从项目根目录 `TranslateBar.app` 启动。 |
+| service-settings-and-install | Phase 1 | 已新增 `TranslationConfiguration`，endpoint/model 通过 `UserDefaults` 配置并保留 v1 默认值。面板新增“服务设置”，支持修改服务地址、模型路径和恢复默认。Debug 和 Release 构建通过。 |
+| service-settings-and-install | Phase 2 | Release App 已同步到项目根目录和 `~/Applications/TranslateBar.app`，并通过 LaunchServices 注册。安装后 `LSUIElement = true`，`codesign --verify --deep --strict --verbose=2 ~/Applications/TranslateBar.app` 通过，Spotlight 元数据显示为 `com.apple.application-bundle`。 |
