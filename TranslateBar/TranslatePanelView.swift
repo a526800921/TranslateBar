@@ -41,7 +41,6 @@ struct TranslatePanelView: View {
             } label: {
                 Image(systemName: "gearshape")
             }
-            .buttonStyle(.borderless)
             .help("设置")
 
             Toggle("自动翻译", isOn: $autoTranslate)
@@ -61,14 +60,9 @@ struct TranslatePanelView: View {
 
             Spacer()
 
-            Button {
+            Button("退出") {
                 NSApp.terminate(nil)
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.borderless)
-            .help("退出")
         }
         .padding(12)
     }
@@ -90,7 +84,7 @@ struct TranslatePanelView: View {
                     service.cancel()
                     service.errorMessage = nil
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -136,7 +130,7 @@ struct TranslatePanelView: View {
                             Image(systemName: "arrow.clockwise")
                         }
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.plain)
                     .disabled(modelListService.isLoading)
                     .help("刷新模型列表")
                 }
