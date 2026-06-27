@@ -66,7 +66,13 @@ open ~/Applications/TranslateBar.app
 
 ## 开发
 
-Debug 构建：
+Debug 构建与启动（一步到位）：
+
+```bash
+./scripts/build_and_run.sh
+```
+
+单独 Debug 构建：
 
 ```bash
 xcodebuild \
@@ -81,6 +87,25 @@ Release 安装建议统一使用：
 ```bash
 ./scripts/install_app.sh
 ```
+
+## 测试
+
+```bash
+# 运行全部测试（含覆盖率）
+xcodebuild test \
+  -project TranslateBar.xcodeproj \
+  -scheme TranslateBar \
+  -destination 'platform=macOS,arch=arm64' \
+  -enableCodeCoverage YES
+```
+
+当前覆盖率：**90.2%**（136 个测试，核心逻辑 96.5%）。
+
+测试架构：
+- 协议抽象层（`URLSessionProtocol` / `SMAppServiceProtocol`）通过依赖注入解耦网络和系统服务
+- Mock 层（`MockURLSession` / `MockSMAppService`）模拟外部依赖
+- `TranslatePanelView` 子视图可见性改为 internal，支持独立渲染测试
+- `URLProtocol` 子类覆盖 `URLSession` 协议扩展的流式方法
 
 ## 计划文档
 
