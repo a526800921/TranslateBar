@@ -162,8 +162,9 @@ struct TranslatePanelView: View {
             TextEditor(text: $inputText)
                 .font(.system(size: 14))
                 .frame(height: 170)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.secondary.opacity(0.25))
                 )
                 .onChange(of: inputText) { _, newValue in
