@@ -159,15 +159,20 @@ struct TranslatePanelView: View {
                 .keyboardShortcut(.return, modifiers: [.command])
             }
 
-            TextEditor(text: $inputText)
-                .font(.system(size: 14))
-                .frame(height: 170)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary.opacity(0.25))
-                )
-                .onChange(of: inputText) { _, newValue in
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.textBackgroundColor))
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.secondary.opacity(0.25))
+
+                TextEditor(text: $inputText)
+                    .font(.system(size: 14))
+                    .scrollContentBackground(.hidden)
+                    .background(.clear)
+                    .padding(4)
+            }
+            .frame(height: 170)
+            .onChange(of: inputText) { _, newValue in
                     if autoTranslate {
                         service.translate(text: newValue, mode: mode)
                     }

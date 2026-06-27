@@ -72,7 +72,7 @@ Phase 3：已完成。
 
 全部阶段已完成。构建安装脚本、登录项开关和文档验证均已通过。
 
-### Step 0 证据
+## Step 0 证据
 
 已完成（2026-06-27）：
 
@@ -114,7 +114,7 @@ Phase 3：已完成。
 - `TranslateBar.xcodeproj/project.pbxproj` 已更新，加入 `LoginItemService.swift`。
 - Release 构建通过，`LoginItemService.swift` 编译链接正常。
 
-### Phase 3 验证
+## 验证
 
 - `scripts/install_app.sh` 从非干净构建状态成功完成。
 - 脚本完成后 `~/Applications/TranslateBar.app` 存在且已签名。
@@ -153,4 +153,3 @@ Phase 3：已完成。
 - v1 完成计划：[translatebar-v1](translatebar-v1.md)
 - 配置与安装计划：[service-settings-and-install](service-settings-and-install.md)
 - 计划索引：[PLAN_MAP.md](../PLAN_MAP.md)
-
