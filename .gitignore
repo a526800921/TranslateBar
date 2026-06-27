@@ -3,6 +3,7 @@
 *.xcuserstate
 xcuserdata/
 DerivedData/
+.build/
 *.app/
 *.dSYM/
 AppIcon.iconset/
