@@ -152,12 +152,20 @@ Phase 0-3 已完成（2026-06-27）。
 - 取消和错误路径稳定。
 - 文档记录 Step 0 和验证证据。
 
+## 测试覆盖率
+
+- 已建立 `TranslateBarTests` XCTest target，共 8 个测试文件、141 个 `func test...` 测试函数；本轮 `xcodebuild test` 实际执行 136 个测试。
+- 与本计划相关的覆盖包括 `TranslationServiceTests.swift`、`ModelsTests.swift`、`TranslationConfigurationTests.swift` 和 `TranslatePanelViewTests.swift`。
+- 覆盖面包括 `ChatCompletionChunk` 解码、`finish_reason` 映射、流式成功路径、keepalive 注释跳过、流式 HTTP 错误、非流式 fallback、流式开关配置和面板状态渲染。
+- 手动验收仍覆盖真实本地服务 SSE 样本、短文本增量显示、关闭流式后回到非流式路径。
+- 测试通过证据：2026-06-27 运行 `xcodebuild test -project TranslateBar.xcodeproj -scheme TranslateBar -destination 'platform=macOS' -enableCodeCoverage YES`，136 个测试全部通过，0 失败；`xccov` 报告 `TranslateBar.app` 覆盖率为 90.20% (1242/1377)。
+
 ## 开放问题
 
 | 问题 | 建议处理 | 是否阻塞当前阶段 | 状态 |
 |---|---|---|---|
-| 流式输出默认是否启用？ | 建议默认关闭，验证稳定后再考虑默认开启。 | 否 | 候选 |
-| 服务是否严格兼容 OpenAI SSE 格式？ | Phase 0 用真实样本决定 parser，不提前假设。 | 是 | 待确认 |
+| 流式输出默认是否启用？ | 默认关闭，用户可在设置区手动开启。 | 否 | 已决定 |
+| 服务是否严格兼容 OpenAI SSE 格式？ | Phase 0 已用真实样本确认标准 OpenAI SSE 格式，parser 按 `choices[0].delta.content` 和 `[DONE]` 实现。 | 否 | 已解决 |
 
 ## 风险与回滚
 
@@ -171,4 +179,3 @@ Phase 0-3 已完成（2026-06-27）。
 - v1 完成计划：[translatebar-v1](translatebar-v1.md)
 - 配置与安装计划：[service-settings-and-install](service-settings-and-install.md)
 - 计划索引：[PLAN_MAP.md](../PLAN_MAP.md)
-

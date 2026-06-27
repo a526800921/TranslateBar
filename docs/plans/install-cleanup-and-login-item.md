@@ -133,13 +133,21 @@ Phase 3：已完成。
 - 登录项开关可用且默认不强制启用。 ✓
 - 文档记录验证证据，并将计划状态更新为 `已完成`。 ✓
 
+## 测试覆盖率
+
+- 已建立 `TranslateBarTests` XCTest target，共 8 个测试文件、141 个 `func test...` 测试函数；本轮 `xcodebuild test` 实际执行 136 个测试。
+- 与本计划相关的覆盖包括 `LoginItemServiceTests.swift`、`TranslatePanelViewTests.swift` 和 `AppDelegateTests.swift`。
+- 覆盖面包括登录项状态刷新、启用/关闭、注册/注销错误、`requiresApproval`/`notFound` 状态、设置区登录项开关渲染和菜单栏 App 启动结构。
+- 构建安装清理脚本以实际脚本执行、重复 App 清理、`mdfind` 唯一路径、签名验证和 `LSUIElement = true` 作为测试通过证据。
+- 测试通过证据：2026-06-27 运行 `xcodebuild test -project TranslateBar.xcodeproj -scheme TranslateBar -destination 'platform=macOS' -enableCodeCoverage YES`，136 个测试全部通过，0 失败；`xccov` 报告 `TranslateBar.app` 覆盖率为 90.20% (1242/1377)。
+
 ## 开放问题
 
 | 问题 | 建议处理 | 是否阻塞当前阶段 | 状态 |
 |---|---|---|---|
-| 登录项默认是否启用？ | 默认关闭，由用户手动打开。 | 否 | 建议决定 |
-| 是否需要清理整个 DerivedData？ | 不需要，只删除 TranslateBar 构建产物中的 `TranslateBar.app`。 | 否 | 建议决定 |
-| 是否需要把脚本加入 Xcode Run Script phase？ | 暂不加入，避免每次普通构建都安装和清理；作为手动发布脚本使用。 | 否 | 建议决定 |
+| 登录项默认是否启用？ | 默认关闭，由用户手动打开。 | 否 | 已决定 |
+| 是否需要清理整个 DerivedData？ | 不需要，只删除 TranslateBar 构建产物中的 `TranslateBar.app`。 | 否 | 已决定 |
+| 是否需要把脚本加入 Xcode Run Script phase？ | 暂不加入，避免每次普通构建都安装和清理；作为手动发布脚本使用。 | 否 | 已决定 |
 
 ## 风险与回滚
 

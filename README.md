@@ -117,6 +117,7 @@ xcodebuild test \
 - [安装清理与登录项计划](docs/plans/install-cleanup-and-login-item.md)
 - [模型列表选择计划](docs/plans/model-list-selection.md)
 - [流式翻译计划](docs/plans/streaming-translation.md)
+- [单元测试覆盖率计划](docs/plans/unit-test-coverage.md)
 
 ## 已知边界
 

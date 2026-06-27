@@ -111,6 +111,14 @@ Phase 1-2 已完成。App 已支持 endpoint/model 配置，并已安装到 `~/A
 - 2026-06-27：`codesign --verify --deep --strict --verbose=2 ~/Applications/TranslateBar.app` 通过。
 - 2026-06-27：`mdls` 显示安装产物为 `com.apple.application-bundle`，显示名为 `TranslateBar`。
 
+## 测试覆盖率
+
+- 已建立 `TranslateBarTests` XCTest target，共 8 个测试文件、141 个 `func test...` 测试函数；本轮 `xcodebuild test` 实际执行 136 个测试。
+- 与本计划相关的覆盖包括 `TranslationConfigurationTests.swift`、`TranslationServiceTests.swift` 和 `TranslatePanelViewTests.swift`。
+- 覆盖面包括默认 endpoint/model、`UserDefaults` 配置读取、非法 endpoint、空模型路径、`modelsEndpoint` 推导基础、设置区渲染、错误信息和翻译请求配置构造。
+- 安装侧仍以 Release 构建、`~/Applications/TranslateBar.app` 存在、`LSUIElement = true` 和签名验证通过作为测试通过证据。
+- 测试通过证据：2026-06-27 运行 `xcodebuild test -project TranslateBar.xcodeproj -scheme TranslateBar -destination 'platform=macOS' -enableCodeCoverage YES`，136 个测试全部通过，0 失败；`xccov` 报告 `TranslateBar.app` 覆盖率为 90.20% (1242/1377)。
+
 ## 开放问题
 
 | 问题 | 建议处理 | 是否阻塞当前阶段 | 状态 |

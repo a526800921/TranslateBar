@@ -15,6 +15,7 @@
 | [install-cleanup-and-login-item](plans/install-cleanup-and-login-item.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/install-cleanup-and-login-item.md#step-0-证据)，[已完成证据](#已完成证据) |
 | [model-list-selection](plans/model-list-selection.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/model-list-selection.md#step-0-证据)，[已完成证据](#已完成证据) |
 | [streaming-translation](plans/streaming-translation.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/streaming-translation.md#step-0-证据)，[已完成证据](#已完成证据) |
+| [unit-test-coverage](plans/unit-test-coverage.md) | 已完成 | Phase 0-3 已完成 | translatebar-v1, service-settings-and-install, install-cleanup-and-login-item, model-list-selection, streaming-translation | [Step 0 证据](plans/unit-test-coverage.md#step-0-证据)，[已完成证据](#已完成证据) |
 
 允许的状态值：`候选`、`设计中`、`待实施`、`实施中`、`已完成`、`已替代`、`已合并`、`已废弃`。
 
@@ -25,6 +26,7 @@
 3. `install-cleanup-and-login-item`
 4. `model-list-selection`
 5. `streaming-translation`
+6. `unit-test-coverage`
 
 ## 依赖关系
 
@@ -37,6 +39,11 @@
 | install-cleanup-and-login-item | service-settings-and-install | 需要基于已安装到 `~/Applications/TranslateBar.app` 的单一正式产物实现构建清理和登录项。 |
 | model-list-selection | service-settings-and-install | 模型列表读取依赖已配置的服务地址，并应复用当前 endpoint/model 配置。 |
 | streaming-translation | service-settings-and-install | 流式输出依赖当前翻译请求配置和错误显示基础。 |
+| unit-test-coverage | translatebar-v1 | 测试覆盖需要覆盖 v1 的模型、翻译服务、菜单栏启动和面板基础行为。 |
+| unit-test-coverage | service-settings-and-install | 测试覆盖需要覆盖 endpoint/model 配置读取和请求配置构造。 |
+| unit-test-coverage | install-cleanup-and-login-item | 测试覆盖需要覆盖登录项服务和设置区开关行为。 |
+| unit-test-coverage | model-list-selection | 测试覆盖需要覆盖 `/v1/models` 解析、错误路径和模型选择相关状态。 |
+| unit-test-coverage | streaming-translation | 测试覆盖需要覆盖 SSE chunk 解码、流式成功路径、keepalive 跳过和非流式 fallback。 |
 
 ## 替换、合并与废弃
 
@@ -48,6 +55,7 @@
 | install-cleanup-and-login-item | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 规范后续构建安装流程，避免 Launchpad 重复项，并补上登录项/开机自启动。 |
 | model-list-selection | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 将模型路径手动输入扩展为从 `/v1/models` 读取和选择。 |
 | streaming-translation | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 将非流式翻译扩展为可选流式输出。 |
+| unit-test-coverage | 来源 | [superpowers 单元测试覆盖率设计](superpowers/specs/2026-06-27-unit-test-coverage-design.md) | 将 superpowers 中的 90%+ 单元测试覆盖率功能计划合并进治理体系。 |
 
 ## 当前阻塞项
 
@@ -83,3 +91,7 @@
 | streaming-translation | Phase 1 | `Models.swift` 新增 `ChatCompletionChunk`/`ChunkChoice`/`ChunkDelta`；`TranslationService` 新增 `performStreamingTranslation`（`AsyncBytes.lines` 逐行 SSE 解析，UUID 校验每次增量写入）。 |
 | streaming-translation | Phase 2 | `TranslationConfiguration.streamingEnabled` + `translationStreamingEnabled` 键；设置区「流式输出」`Toggle`（默认关闭）；非流式路径完全保留。 |
 | streaming-translation | Phase 3 | Debug/Release 构建通过，手动验收流式增量显示正常。 |
+| unit-test-coverage | Phase 0 | superpowers 设计文档固定目标：新增 XCTest 测试，将 App 覆盖率提升到 90%+，并通过协议抽象和 Mock 层解耦外部依赖。 |
+| unit-test-coverage | Phase 1 | `TranslateBarTests` target、`URLSessionProtocol`、`SMAppServiceProtocol`、Mock 网络和 Mock 登录项服务已加入工程。 |
+| unit-test-coverage | Phase 2 | 已覆盖模型、配置、翻译服务、模型列表服务、登录项服务、菜单栏启动、面板渲染和 URLSession 协议路径。 |
+| unit-test-coverage | Phase 3 | `xcodebuild test` 执行 136 个测试，0 失败；`xccov` 报告 `TranslateBar.app` 覆盖率 90.20% (1242/1377)；治理检查通过。 |

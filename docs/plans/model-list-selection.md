@@ -132,12 +132,20 @@ Phase 0-3 已完成（2026-06-27）。
 - 错误信息可诊断。
 - 文档记录 Step 0 和验证证据。
 
+## 测试覆盖率
+
+- 已建立 `TranslateBarTests` XCTest target，共 8 个测试文件、141 个 `func test...` 测试函数；本轮 `xcodebuild test` 实际执行 136 个测试。
+- 与本计划相关的覆盖包括 `ModelListServiceTests.swift`、`TranslationConfigurationTests.swift`、`ModelsTests.swift` 和 `TranslatePanelViewTests.swift`。
+- 覆盖面包括 `/v1/models` 响应解析、空模型列表、非法 endpoint、HTTP 错误、非 HTTP 响应、网络错误、加载状态、`modelsEndpoint` 推导、模型列表 UI 状态和手动模型输入 fallback。
+- 手动验收仍覆盖真实本地服务的 `/v1/models` 响应、刷新模型、选择模型和安装后运行路径。
+- 测试通过证据：2026-06-27 运行 `xcodebuild test -project TranslateBar.xcodeproj -scheme TranslateBar -destination 'platform=macOS' -enableCodeCoverage YES`，136 个测试全部通过，0 失败；`xccov` 报告 `TranslateBar.app` 覆盖率为 90.20% (1242/1377)。
+
 ## 开放问题
 
 | 问题 | 建议处理 | 是否阻塞当前阶段 | 状态 |
 |---|---|---|---|
-| 如果 endpoint 不是 `/v1/chat/completions` 结尾怎么办？ | Phase 0 固定推导规则；无法推导时要求用户手动输入模型路径。 | 否 | 候选 |
-| 是否自动刷新模型列表？ | 暂不自动刷新，由用户点击按钮触发。 | 否 | 建议决定 |
+| 如果 endpoint 不是 `/v1/chat/completions` 结尾怎么办？ | Phase 0 固定推导规则；无法推导时要求用户手动输入模型路径。 | 否 | 已决定 |
+| 是否自动刷新模型列表？ | 暂不自动刷新，由用户点击按钮触发。 | 否 | 已决定 |
 
 ## 风险与回滚
 
@@ -150,4 +158,3 @@ Phase 0-3 已完成（2026-06-27）。
 
 - 配置与安装计划：[service-settings-and-install](service-settings-and-install.md)
 - 计划索引：[PLAN_MAP.md](../PLAN_MAP.md)
-
