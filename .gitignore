@@ -6,4 +6,6 @@ DerivedData/
 *.app/
 *.dSYM/
 AppIcon.iconset/
+CLAUDE.md
 AGENTS.md
+.claude
