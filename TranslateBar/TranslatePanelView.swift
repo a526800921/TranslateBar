@@ -7,6 +7,7 @@ struct TranslatePanelView: View {
     @StateObject private var modelListService = ModelListService()
     @AppStorage(TranslationConfiguration.Keys.endpoint) private var endpoint = TranslationConfiguration.defaultEndpoint
     @AppStorage(TranslationConfiguration.Keys.model) private var model = TranslationConfiguration.defaultModel
+    @AppStorage(TranslationConfiguration.Keys.streamingEnabled) private var streamingEnabled = false
     @State private var inputText = ""
     @State private var mode: TranslationMode = .auto
     @State private var autoTranslate = true
@@ -150,6 +151,12 @@ struct TranslatePanelView: View {
             .onAppear {
                 Task { await modelListService.fetchModels() }
             }
+
+            Toggle("流式输出", isOn: $streamingEnabled)
+                .toggleStyle(.switch)
+                .onChange(of: streamingEnabled) {
+                    service.cancel()
+                }
 
             Divider()
 

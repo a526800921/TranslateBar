@@ -4,6 +4,7 @@ struct TranslationConfiguration {
     enum Keys {
         static let endpoint = "translationEndpoint"
         static let model = "translationModel"
+        static let streamingEnabled = "translationStreamingEnabled"
     }
 
     static let defaultEndpoint = "http://127.0.0.1:8787/v1/chat/completions"
@@ -11,6 +12,7 @@ struct TranslationConfiguration {
 
     let endpointString: String
     let model: String
+    let streamingEnabled: Bool
 
     var endpoint: URL? {
         URL(string: endpointString)
@@ -33,10 +35,12 @@ struct TranslationConfiguration {
     static func current(defaults: UserDefaults = .standard) -> TranslationConfiguration {
         let endpoint = defaults.string(forKey: Keys.endpoint) ?? defaultEndpoint
         let model = defaults.string(forKey: Keys.model) ?? defaultModel
+        let streamingEnabled = defaults.bool(forKey: Keys.streamingEnabled)
 
         return TranslationConfiguration(
             endpointString: endpoint.trimmingCharacters(in: .whitespacesAndNewlines),
-            model: model.trimmingCharacters(in: .whitespacesAndNewlines)
+            model: model.trimmingCharacters(in: .whitespacesAndNewlines),
+            streamingEnabled: streamingEnabled
         )
     }
 }

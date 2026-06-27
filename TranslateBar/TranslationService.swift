@@ -51,48 +51,23 @@ final class TranslationService: ObservableObject {
                 throw TranslationError.invalidEndpoint(configuration.endpointString)
             }
 
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "POST"
-            request.timeoutInterval = 120
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            let payload = ChatCompletionRequest(
-                model: configuration.model,
-                messages: [
-                    ChatMessage(role: "user", content: makePrompt(text: text, mode: mode))
-                ],
-                temperature: 0.1,
-                topP: 0.6,
-                maxTokens: 4096,
-                stream: false
-            )
-
-            request.httpBody = try JSONEncoder().encode(payload)
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard currentTranslateId == id else { return }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw TranslationError.invalidResponse
-            }
-
-            guard (200..<300).contains(httpResponse.statusCode) else {
-                throw TranslationError.httpError(
-                    statusCode: httpResponse.statusCode,
-                    message: parseErrorMessage(from: data)
+            if configuration.streamingEnabled {
+                try await performStreamingTranslation(
+                    text: text,
+                    mode: mode,
+                    configuration: configuration,
+                    endpoint: endpoint,
+                    id: id
+                )
+            } else {
+                try await performNonStreamingTranslation(
+                    text: text,
+                    mode: mode,
+                    configuration: configuration,
+                    endpoint: endpoint,
+                    id: id
                 )
             }
-
-            let decoded = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
-            let content = decoded.choices.first?.message?.content ?? decoded.choices.first?.text
-            let translatedText = content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-            if translatedText.isEmpty {
-                throw TranslationError.emptyContent
-            }
-
-            guard currentTranslateId == id else { return }
-            result = translatedText
         } catch is CancellationError {
             return
         } catch {
@@ -102,6 +77,131 @@ final class TranslationService: ObservableObject {
 
         if currentTranslateId == id {
             isLoading = false
+        }
+    }
+
+    private func performNonStreamingTranslation(
+        text: String,
+        mode: TranslationMode,
+        configuration: TranslationConfiguration,
+        endpoint: URL,
+        id: UUID
+    ) async throws {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 120
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let payload = ChatCompletionRequest(
+            model: configuration.model,
+            messages: [
+                ChatMessage(role: "user", content: makePrompt(text: text, mode: mode))
+            ],
+            temperature: 0.1,
+            topP: 0.6,
+            maxTokens: 4096,
+            stream: false
+        )
+
+        request.httpBody = try JSONEncoder().encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard currentTranslateId == id else { return }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw TranslationError.invalidResponse
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw TranslationError.httpError(
+                statusCode: httpResponse.statusCode,
+                message: parseErrorMessage(from: data)
+            )
+        }
+
+        let decoded = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
+        let content = decoded.choices.first?.message?.content ?? decoded.choices.first?.text
+        let translatedText = content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        if translatedText.isEmpty {
+            throw TranslationError.emptyContent
+        }
+
+        guard currentTranslateId == id else { return }
+        result = translatedText
+    }
+
+    private func performStreamingTranslation(
+        text: String,
+        mode: TranslationMode,
+        configuration: TranslationConfiguration,
+        endpoint: URL,
+        id: UUID
+    ) async throws {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 120
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let payload = ChatCompletionRequest(
+            model: configuration.model,
+            messages: [
+                ChatMessage(role: "user", content: makePrompt(text: text, mode: mode))
+            ],
+            temperature: 0.1,
+            topP: 0.6,
+            maxTokens: 4096,
+            stream: true
+        )
+
+        request.httpBody = try JSONEncoder().encode(payload)
+
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        guard currentTranslateId == id else { return }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw TranslationError.invalidResponse
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            var errorBody = Data()
+            for try await byte in bytes {
+                errorBody.append(byte)
+                if errorBody.count >= 500 { break }
+            }
+            let message = String(data: errorBody, encoding: .utf8) ?? ""
+            throw TranslationError.httpError(
+                statusCode: httpResponse.statusCode,
+                message: message
+            )
+        }
+
+        guard currentTranslateId == id else { return }
+        result = ""
+
+        for try await line in bytes.lines {
+            guard currentTranslateId == id else { return }
+
+            if line.hasPrefix(":") { continue }
+            if line == "data: [DONE]" { break }
+            guard line.hasPrefix("data: ") else { continue }
+
+            let jsonString = String(line.dropFirst(6))
+            guard let jsonData = jsonString.data(using: .utf8) else { continue }
+
+            do {
+                let chunk = try JSONDecoder().decode(ChatCompletionChunk.self, from: jsonData)
+                if let content = chunk.choices.first?.delta?.content {
+                    result += content
+                }
+            } catch {
+                continue
+            }
+        }
+
+        if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            guard currentTranslateId == id else { return }
+            throw TranslationError.emptyContent
         }
     }
 

@@ -14,7 +14,7 @@
 | [service-settings-and-install](plans/service-settings-and-install.md) | 已完成 | Phase 1-2 已完成 | translatebar-v1 | [Step 0 证据](plans/service-settings-and-install.md#step-0-证据)，[已完成证据](#已完成证据) |
 | [install-cleanup-and-login-item](plans/install-cleanup-and-login-item.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/install-cleanup-and-login-item.md#step-0-证据)，[已完成证据](#已完成证据) |
 | [model-list-selection](plans/model-list-selection.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/model-list-selection.md#step-0-证据)，[已完成证据](#已完成证据) |
-| [streaming-translation](plans/streaming-translation.md) | 候选 | Phase 0 | service-settings-and-install | [Step 0 证据待补](plans/streaming-translation.md#step-0-证据) |
+| [streaming-translation](plans/streaming-translation.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/streaming-translation.md#step-0-证据)，[已完成证据](#已完成证据) |
 
 允许的状态值：`候选`、`设计中`、`待实施`、`实施中`、`已完成`、`已替代`、`已合并`、`已废弃`。
 
@@ -59,7 +59,7 @@
 | 配置化会改变请求失败信息 | 已实现：错误提示展示当前配置的 endpoint，非法 endpoint 和空模型路径会提前报错。 | 配置错误时用户难以诊断 | 否 | 已解决 |
 | 后续构建可能重新注册 DerivedData 中的 `TranslateBar.app` | 已解决：`install-cleanup-and-login-item` 提供了 `scripts/install_app.sh`，构建后自动清理 DerivedData 重复产物并只保留 `~/Applications/TranslateBar.app`。 | 启动台搜索可能再次出现多个同名 App | 否 | 已解决 |
 | 模型列表接口的 endpoint 推导方式未验证 | 已解决：`model-list-selection` 已完成，`/v1/models` 响应为标准 OpenAI 格式（`data[].id`），`TranslationConfiguration.modelsEndpoint` 从 chat endpoint 推导。 | 模型列表可能请求到错误地址 | 否 | 已解决 |
-| 流式响应格式未验证 | `streaming-translation` Phase 0 需要用 `stream: true` 固定真实 SSE 样本。 | parser 可能无法兼容服务输出 | 否 | 候选 |
+| 流式响应格式未验证 | 已解决：`streaming-translation` 已完成，SSE 为标准 OpenAI 格式（`choices[0].delta.content`，`[DONE]` 结束），`URLSession.AsyncBytes.lines` 逐行解析。 | parser 可能无法兼容服务输出 | 否 | 已解决 |
 
 ## 已完成证据
 
@@ -79,3 +79,7 @@
 | model-list-selection | Phase 1 | `Models.swift` 新增 `ModelListResponse`/`ModelItem`；`TranslationConfiguration.modelsEndpoint` 推导属性；`ModelListService` 异步拉取+可读错误。 |
 | model-list-selection | Phase 2 | `TranslatePanelView` 设置区新增「刷新模型列表」按钮（含 `ProgressView` 加载态）、`Picker` 模型选择、`TextField` 手动输入 fallback、错误内联显示。 |
 | model-list-selection | Phase 3 | Debug/Release 构建通过，`install_app.sh` 安装成功。 |
+| streaming-translation | Phase 0 | `stream: true` SSE 探测成功（标准 OpenAI 格式 `choices[0].delta.content`，`[DONE]` 结束标记，keepalive 注释行）。 |
+| streaming-translation | Phase 1 | `Models.swift` 新增 `ChatCompletionChunk`/`ChunkChoice`/`ChunkDelta`；`TranslationService` 新增 `performStreamingTranslation`（`AsyncBytes.lines` 逐行 SSE 解析，UUID 校验每次增量写入）。 |
+| streaming-translation | Phase 2 | `TranslationConfiguration.streamingEnabled` + `translationStreamingEnabled` 键；设置区「流式输出」`Toggle`（默认关闭）；非流式路径完全保留。 |
+| streaming-translation | Phase 3 | Debug/Release 构建通过，手动验收流式增量显示正常。 |

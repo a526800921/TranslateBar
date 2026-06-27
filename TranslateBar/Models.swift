@@ -49,6 +49,24 @@ struct ModelItem: Decodable {
     let id: String
 }
 
+struct ChatCompletionChunk: Decodable {
+    let choices: [ChunkChoice]
+}
+
+struct ChunkChoice: Decodable {
+    let delta: ChunkDelta?
+    let finishReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case delta
+        case finishReason = "finish_reason"
+    }
+}
+
+struct ChunkDelta: Decodable {
+    let content: String?
+}
+
 enum TranslationMode: String, CaseIterable, Identifiable {
     case auto = "自动"
     case zhToEn = "中译英"
