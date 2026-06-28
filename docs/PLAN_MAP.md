@@ -6,16 +6,24 @@
 
 普通一次性修改不进入这里。以下情况需要新增或更新条目：工作跨阶段推进、改变本地 API 契约、改变 App 打包或启动行为、使现有验证证据失效。
 
+## 文档权责
+
+- 本文件是状态、依赖、替代/合并/废弃关系、推荐顺序、当前阻塞项和证据链接的事实源。
+- `docs/plans/*.md` 是专项计划实施细节的事实源，包括字段方案、Schema、枚举、Step 0 证据、验证方式、完成条件、风险和回滚。
+- 总路线图、优先级计划和索引只记录顺序、状态摘要和专项计划链接，不复制字段级方案、枚举、Step 0 细节或完成定义。
+- 当专项计划状态、字段方案、完成条件或验证结果变化时，必须同步本文件和所有引用该计划的路线图、优先级计划、索引文档。
+- 验收治理文档时，必须用 `rg` 搜索同名计划、P 编号、状态名和关键字段，检查重复定义或漂移。
+
 ## 计划索引
 
 | 计划 | 状态 | 当前阶段 | 依赖 | 证据 |
 |---|---|---|---|---|
-| [translatebar-v1](plans/translatebar-v1.md) | 已完成 | Phase 0-2 已完成；Phase 3 候选 | `127.0.0.1:8787` 上的本地 Hy-MT2 服务 | [Step 0 证据](plans/translatebar-v1.md#step-0-证据)，[已完成证据](#已完成证据) |
-| [service-settings-and-install](plans/service-settings-and-install.md) | 已完成 | Phase 1-2 已完成 | translatebar-v1 | [Step 0 证据](plans/service-settings-and-install.md#step-0-证据)，[已完成证据](#已完成证据) |
-| [install-cleanup-and-login-item](plans/install-cleanup-and-login-item.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/install-cleanup-and-login-item.md#step-0-证据)，[已完成证据](#已完成证据) |
-| [model-list-selection](plans/model-list-selection.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/model-list-selection.md#step-0-证据)，[已完成证据](#已完成证据) |
-| [streaming-translation](plans/streaming-translation.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0 证据](plans/streaming-translation.md#step-0-证据)，[已完成证据](#已完成证据) |
-| [unit-test-coverage](plans/unit-test-coverage.md) | 已完成 | Phase 0-3 已完成 | translatebar-v1, service-settings-and-install, install-cleanup-and-login-item, model-list-selection, streaming-translation | [Step 0 证据](plans/unit-test-coverage.md#step-0-证据)，[已完成证据](#已完成证据) |
+| [translatebar-v1](plans/translatebar-v1.md) | 已完成 | Phase 0-2 已完成；Phase 3 候选 | `127.0.0.1:8787` 上的本地 Hy-MT2 服务 | [Step 0](plans/translatebar-v1.md#step-0-证据)，[完成标准](plans/translatebar-v1.md#完成标准)，[测试覆盖率](plans/translatebar-v1.md#测试覆盖率) |
+| [service-settings-and-install](plans/service-settings-and-install.md) | 已完成 | Phase 1-2 已完成 | translatebar-v1 | [Step 0](plans/service-settings-and-install.md#step-0-证据)，[完成标准](plans/service-settings-and-install.md#完成标准)，[测试覆盖率](plans/service-settings-and-install.md#测试覆盖率) |
+| [install-cleanup-and-login-item](plans/install-cleanup-and-login-item.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0](plans/install-cleanup-and-login-item.md#step-0-证据)，[完成标准](plans/install-cleanup-and-login-item.md#完成标准)，[测试覆盖率](plans/install-cleanup-and-login-item.md#测试覆盖率) |
+| [model-list-selection](plans/model-list-selection.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0](plans/model-list-selection.md#step-0-证据)，[完成标准](plans/model-list-selection.md#完成标准)，[测试覆盖率](plans/model-list-selection.md#测试覆盖率) |
+| [streaming-translation](plans/streaming-translation.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0](plans/streaming-translation.md#step-0-证据)，[完成标准](plans/streaming-translation.md#完成标准)，[测试覆盖率](plans/streaming-translation.md#测试覆盖率) |
+| [unit-test-coverage](plans/unit-test-coverage.md) | 已完成 | Phase 0-3 已完成 | translatebar-v1, service-settings-and-install, install-cleanup-and-login-item, model-list-selection, streaming-translation | [Step 0](plans/unit-test-coverage.md#step-0-证据)，[完成标准](plans/unit-test-coverage.md#完成标准)，[测试覆盖率](plans/unit-test-coverage.md#测试覆盖率) |
 
 允许的状态值：`候选`、`设计中`、`待实施`、`实施中`、`已完成`、`已替代`、`已合并`、`已废弃`。
 
@@ -69,29 +77,15 @@
 | 模型列表接口的 endpoint 推导方式未验证 | 已解决：`model-list-selection` 已完成，`/v1/models` 响应为标准 OpenAI 格式（`data[].id`），`TranslationConfiguration.modelsEndpoint` 从 chat endpoint 推导。 | 模型列表可能请求到错误地址 | 否 | 已解决 |
 | 流式响应格式未验证 | 已解决：`streaming-translation` 已完成，SSE 为标准 OpenAI 格式（`choices[0].delta.content`，`[DONE]` 结束），`URLSession.AsyncBytes.lines` 逐行解析。 | parser 可能无法兼容服务输出 | 否 | 已解决 |
 
-## 已完成证据
+## 证据链接
 
-| 计划 | 阶段 | 证据 |
-|---|---|---|
-| translatebar-v1 | Phase 0 | `TranslateBar.fixed.md` 记录了 `/v1/models` 和 `/v1/chat/completions` 探测成功、完整本地模型 id，以及响应路径 `choices[0].message.content`。 |
-| translatebar-v1 | Phase 1 | 构建成功（Debug，xcodebuild，arm64）。`LSUIElement = YES` 已确认。Project 使用 macOS 15.0 deployment target，Swift 5.0。手动验收 14/14 项全部通过（2026-06-27）。防抖 300ms。 |
-| translatebar-v1 | Phase 2 | Release 构建成功（arm64，378K）。`TranslateBar.app` 的 `LSUIElement = true` 已确认，`codesign --verify --deep --strict --verbose=2 TranslateBar.app` 通过。产物复制到项目根目录 `TranslateBar.app`。从项目目录启动验证通过。 |
-| service-settings-and-install | Phase 0 | v1 已完成；当前硬编码 endpoint 为 `http://127.0.0.1:8787/v1/chat/completions`，模型路径为 `/Users/jafish/Documents/models/Hy-MT2-7B-4bit`；当前 App 可从项目根目录 `TranslateBar.app` 启动。 |
-| service-settings-and-install | Phase 1 | 已新增 `TranslationConfiguration`，endpoint/model 通过 `UserDefaults` 配置并保留 v1 默认值。面板新增“服务设置”，支持修改服务地址、模型路径和恢复默认。Debug 和 Release 构建通过。 |
-| service-settings-and-install | Phase 2 | Release App 已同步到项目根目录和 `~/Applications/TranslateBar.app`，并通过 LaunchServices 注册。安装后 `LSUIElement = true`，`codesign --verify --deep --strict --verbose=2 ~/Applications/TranslateBar.app` 通过，Spotlight 元数据显示为 `com.apple.application-bundle`。 |
-| install-cleanup-and-login-item | Phase 0 | 基线确认：`find`/`mdfind` 仅一个 `~/Applications/TranslateBar.app`；DerivedData 干净；`LSUIElement = true`；签名通过；登录项状态 `notFound`（未注册）；无 LaunchAgent。 |
-| install-cleanup-and-login-item | Phase 1 | `scripts/install_app.sh` 创建：Release build → 安装 `~/Applications/TranslateBar.app` → 清理 DerivedData 和项目根目录重复产物 → `lsregister` 重新注册。脚本执行后 `mdfind` 仅返回正式路径，DerivedData 无残留，签名通过。 |
-| install-cleanup-and-login-item | Phase 2 | `LoginItemService.swift` 封装 `SMAppService.mainApp`（`enable`/`disable`/`refresh`/中文错误信息）。`TranslatePanelView` 设置区域新增「登录时启动」Toggle，默认关闭，错误信息可读。Release 构建通过。 |
-| install-cleanup-and-login-item | Phase 3 | 脚本 → 安装 → 索引 → 登录项 → 治理全部通过。`plan-governance` 验证：`mdfind` 唯一、`LSUIElement = true`、签名通过。 |
-| model-list-selection | Phase 0 | `/v1/models` 探测成功（标准 OpenAI 格式 `data[].id`），endpoint 推导规则 `chat/completions → models` 已确认。 |
-| model-list-selection | Phase 1 | `Models.swift` 新增 `ModelListResponse`/`ModelItem`；`TranslationConfiguration.modelsEndpoint` 推导属性；`ModelListService` 异步拉取+可读错误。 |
-| model-list-selection | Phase 2 | `TranslatePanelView` 设置区新增「刷新模型列表」按钮（含 `ProgressView` 加载态）、`Picker` 模型选择、`TextField` 手动输入 fallback、错误内联显示。 |
-| model-list-selection | Phase 3 | Debug/Release 构建通过，`install_app.sh` 安装成功。 |
-| streaming-translation | Phase 0 | `stream: true` SSE 探测成功（标准 OpenAI 格式 `choices[0].delta.content`，`[DONE]` 结束标记，keepalive 注释行）。 |
-| streaming-translation | Phase 1 | `Models.swift` 新增 `ChatCompletionChunk`/`ChunkChoice`/`ChunkDelta`；`TranslationService` 新增 `performStreamingTranslation`（`AsyncBytes.lines` 逐行 SSE 解析，UUID 校验每次增量写入）。 |
-| streaming-translation | Phase 2 | `TranslationConfiguration.streamingEnabled` + `translationStreamingEnabled` 键；设置区「流式输出」`Toggle`（默认关闭）；非流式路径完全保留。 |
-| streaming-translation | Phase 3 | Debug/Release 构建通过，手动验收流式增量显示正常。 |
-| unit-test-coverage | Phase 0 | superpowers 设计文档固定目标：新增 XCTest 测试，将 App 覆盖率提升到 90%+，并通过协议抽象和 Mock 层解耦外部依赖。 |
-| unit-test-coverage | Phase 1 | `TranslateBarTests` target、`URLSessionProtocol`、`SMAppServiceProtocol`、Mock 网络和 Mock 登录项服务已加入工程。 |
-| unit-test-coverage | Phase 2 | 已覆盖模型、配置、翻译服务、模型列表服务、登录项服务、菜单栏启动、面板渲染和 URLSession 协议路径。 |
-| unit-test-coverage | Phase 3 | `xcodebuild test` 执行 136 个测试，0 失败；`xccov` 报告 `TranslateBar.app` 覆盖率 90.20% (1242/1377)；治理检查通过。 |
+专项计划是 Step 0、实施细节、完成标准和验证结果的事实源。本索引只保留证据入口：
+
+| 计划 | 证据入口 |
+|---|---|
+| translatebar-v1 | [Step 0](plans/translatebar-v1.md#step-0-证据)，[完成标准](plans/translatebar-v1.md#完成标准)，[测试覆盖率](plans/translatebar-v1.md#测试覆盖率) |
+| service-settings-and-install | [Step 0](plans/service-settings-and-install.md#step-0-证据)，[完成标准](plans/service-settings-and-install.md#完成标准)，[测试覆盖率](plans/service-settings-and-install.md#测试覆盖率) |
+| install-cleanup-and-login-item | [Step 0](plans/install-cleanup-and-login-item.md#step-0-证据)，[完成标准](plans/install-cleanup-and-login-item.md#完成标准)，[测试覆盖率](plans/install-cleanup-and-login-item.md#测试覆盖率) |
+| model-list-selection | [Step 0](plans/model-list-selection.md#step-0-证据)，[完成标准](plans/model-list-selection.md#完成标准)，[测试覆盖率](plans/model-list-selection.md#测试覆盖率) |
+| streaming-translation | [Step 0](plans/streaming-translation.md#step-0-证据)，[完成标准](plans/streaming-translation.md#完成标准)，[测试覆盖率](plans/streaming-translation.md#测试覆盖率) |
+| unit-test-coverage | [Step 0](plans/unit-test-coverage.md#step-0-证据)，[完成标准](plans/unit-test-coverage.md#完成标准)，[测试覆盖率](plans/unit-test-coverage.md#测试覆盖率) |

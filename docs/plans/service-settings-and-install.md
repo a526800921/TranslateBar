@@ -100,7 +100,7 @@ Phase 1-2 已完成。App 已支持 endpoint/model 配置，并已安装到 `~/A
 - App 可从 `~/Applications/TranslateBar.app` 启动。
 - 配置默认值与 v1 行为一致。
 - 配置错误显示可读诊断。
-- `docs/PLAN_MAP.md` 和本计划记录完成证据。
+- 本计划记录完成证据，`docs/PLAN_MAP.md` 同步当前状态和证据链接。
 
 完成记录：
 
