@@ -6,28 +6,26 @@ import XCTest
 final class TranslationServiceTests: XCTestCase {
     var service: TranslationService!
     var mockSession: MockURLSession!
+    var testDefaults: UserDefaults!
     private var cancellables = Set<AnyCancellable>()
 
     override func setUp() {
         super.setUp()
         mockSession = MockURLSession()
-        service = TranslationService(session: mockSession)
+        // 用独立 suite 隔离测试，不碰真实持久化域
+        testDefaults = UserDefaults(suiteName: "com.translatebar.tests")
+        testDefaults.removePersistentDomain(forName: "com.translatebar.tests")
+        service = TranslationService(session: mockSession, defaults: testDefaults)
         cancellables.removeAll()
-        // 设置 TranslationConfiguration.persisted
-        TranslationConfiguration.persisted.set("local", forKey: TranslationConfiguration.Keys.provider)
-        TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
-        TranslationConfiguration.persisted.set(false, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        testDefaults.set("local", forKey: TranslationConfiguration.Keys.provider)
+        testDefaults.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        testDefaults.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
+        testDefaults.set(false, forKey: TranslationConfiguration.Keys.streamingEnabled)
     }
 
     override func tearDown() {
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.provider)
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.model)
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.streamingEnabled)
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.cloudAPIKey)
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.cloudEndpoint)
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.cloudModel)
+        testDefaults.removePersistentDomain(forName: "com.translatebar.tests")
+        testDefaults = nil
         mockSession = nil
         service = nil
         super.tearDown()
@@ -97,19 +95,19 @@ final class TranslationServiceTests: XCTestCase {
     // MARK: - makeConfiguration (internal)
 
     func test_makeConfiguration_validConfig() throws {
-        TranslationConfiguration.persisted.set("http://valid.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.set("/model", forKey: TranslationConfiguration.Keys.model)
+        testDefaults.set("http://valid.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        testDefaults.set("/model", forKey: TranslationConfiguration.Keys.model)
 
-        let config = try service.makeConfiguration(defaults: TranslationConfiguration.persisted)
+        let config = try service.makeConfiguration(defaults: testDefaults)
         XCTAssertNotNil(config)
         XCTAssertEqual(config.endpointString, "http://valid.com/v1/chat/completions")
     }
 
     func test_makeConfiguration_emptyEndpoint_throws() {
-        TranslationConfiguration.persisted.set("", forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.set("/model", forKey: TranslationConfiguration.Keys.model)
+        testDefaults.set("", forKey: TranslationConfiguration.Keys.endpoint)
+        testDefaults.set("/model", forKey: TranslationConfiguration.Keys.model)
 
-        XCTAssertThrowsError(try service.makeConfiguration(defaults: TranslationConfiguration.persisted)) { error in
+        XCTAssertThrowsError(try service.makeConfiguration(defaults: testDefaults)) { error in
             guard let translationError = error as? TranslationError,
                   case .invalidEndpoint = translationError else {
                 XCTFail("Expected invalidEndpoint, got \(error)")
@@ -119,10 +117,10 @@ final class TranslationServiceTests: XCTestCase {
     }
 
     func test_makeConfiguration_emptyModel_throws() {
-        TranslationConfiguration.persisted.set("http://valid.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.set("", forKey: TranslationConfiguration.Keys.model)
+        testDefaults.set("http://valid.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        testDefaults.set("", forKey: TranslationConfiguration.Keys.model)
 
-        XCTAssertThrowsError(try service.makeConfiguration(defaults: TranslationConfiguration.persisted)) { error in
+        XCTAssertThrowsError(try service.makeConfiguration(defaults: testDefaults)) { error in
             guard let translationError = error as? TranslationError,
                   case .emptyModel = translationError else {
                 XCTFail("Expected emptyModel, got \(error)")
@@ -275,7 +273,7 @@ final class TranslationServiceTests: XCTestCase {
     // MARK: - Streaming translation
 
     func test_performStreaming_success() async {
-        TranslationConfiguration.persisted.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        testDefaults.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
 
         let lines = [
             #"data: {"choices":[{"delta":{"content":"Hel"},"finish_reason":null}]}"#,
@@ -302,7 +300,7 @@ final class TranslationServiceTests: XCTestCase {
     }
 
     func test_performStreaming_skipComments() async {
-        TranslationConfiguration.persisted.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        testDefaults.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
 
         let lines = [
             ": heartbeat",
@@ -327,7 +325,7 @@ final class TranslationServiceTests: XCTestCase {
     }
 
     func test_performStreaming_httpError() async {
-        TranslationConfiguration.persisted.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        testDefaults.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
 
         let lines = ["error body"]
         mockSession.mockBytesStream = MockURLSession.sseStream(lines: lines)
@@ -349,10 +347,10 @@ final class TranslationServiceTests: XCTestCase {
     // MARK: - DeepSeek non-streaming
 
     func test_deepseekNonStreaming_addsAuthorizationHeader() async {
-        TranslationConfiguration.persisted.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
-        TranslationConfiguration.persisted.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
-        TranslationConfiguration.persisted.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
-        TranslationConfiguration.persisted.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        testDefaults.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        testDefaults.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        testDefaults.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
+        testDefaults.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
 
         let responseJSON = #"{"choices":[{"message":{"role":"assistant","content":"Hello"}}]}"#
         mockSession.mockData = responseJSON.data(using: .utf8)
@@ -374,10 +372,10 @@ final class TranslationServiceTests: XCTestCase {
     }
 
     func test_deepseekNonStreaming_disablesThinking() async {
-        TranslationConfiguration.persisted.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
-        TranslationConfiguration.persisted.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
-        TranslationConfiguration.persisted.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
-        TranslationConfiguration.persisted.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        testDefaults.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        testDefaults.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        testDefaults.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
+        testDefaults.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
 
         let responseJSON = #"{"choices":[{"message":{"role":"assistant","content":"Hello"}}]}"#
         mockSession.mockData = responseJSON.data(using: .utf8)
@@ -404,11 +402,11 @@ final class TranslationServiceTests: XCTestCase {
     // MARK: - DeepSeek streaming
 
     func test_deepseekStreaming_addsAuthorizationHeader() async {
-        TranslationConfiguration.persisted.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
-        TranslationConfiguration.persisted.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
-        TranslationConfiguration.persisted.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
-        TranslationConfiguration.persisted.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
-        TranslationConfiguration.persisted.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        testDefaults.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        testDefaults.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        testDefaults.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
+        testDefaults.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        testDefaults.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
 
         let lines = [
             #"data: {"choices":[{"delta":{"content":"Hi"},"finish_reason":null}]}"#,
@@ -480,9 +478,9 @@ final class TranslationServiceTests: XCTestCase {
     }
 
     func test_deepseekMissingAPIKey_showsReadableError() async {
-        TranslationConfiguration.persisted.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
-        TranslationConfiguration.persisted.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
-        TranslationConfiguration.persisted.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
+        testDefaults.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        testDefaults.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        testDefaults.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
         // 不设置 API key
 
         let exp = expectation(description: "error received")
@@ -504,8 +502,8 @@ final class TranslationServiceTests: XCTestCase {
     // MARK: - readableError (provider-aware)
 
     func test_readableError_deepseekCannotConnect() {
-        TranslationConfiguration.persisted.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
-        TranslationConfiguration.persisted.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        testDefaults.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        testDefaults.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
 
         let error = URLError(.cannotConnectToHost)
         let message = service.readableError(error)

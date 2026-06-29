@@ -5,9 +5,16 @@ import AppKit
 
 @MainActor
 final class TranslatePanelViewTests: XCTestCase {
+    /// 保存测试前真实 persisted 中的 API Key，tearDown 恢复
+    private var savedAPIKey: String?
+    /// ModelListService 直接测试用隔离 suite
+    private var testSuite: UserDefaults!
 
     override func setUp() {
         super.setUp()
+        testSuite = UserDefaults(suiteName: "com.translatebar.tests")
+        testSuite.removePersistentDomain(forName: "com.translatebar.tests")
+        savedAPIKey = TranslationConfiguration.persisted.string(forKey: TranslationConfiguration.Keys.cloudAPIKey)
         TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
         TranslationConfiguration.persisted.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
         TranslationConfiguration.persisted.set(false, forKey: TranslationConfiguration.Keys.streamingEnabled)
@@ -17,6 +24,12 @@ final class TranslatePanelViewTests: XCTestCase {
         TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
         TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.model)
         TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.streamingEnabled)
+        testSuite.removePersistentDomain(forName: "com.translatebar.tests")
+        testSuite = nil
+        // 恢复真实 API Key（如果测试前有的话）
+        if let key = savedAPIKey {
+            TranslationConfiguration.persisted.set(key, forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        }
         super.tearDown()
     }
 
@@ -181,7 +194,7 @@ final class TranslatePanelViewTests: XCTestCase {
         let mock = MockURLSession()
         mock.mockData = #"{"data":[{"id":"model-1"},{"id":"model-2"}]}"#.data(using: .utf8)
         mock.mockResponse = MockURLSession.successResponse()
-        let svc = ModelListService(session: mock)
+        let svc = ModelListService(session: mock, defaults: testSuite)
         TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
         TranslationConfiguration.persisted.set("/model", forKey: TranslationConfiguration.Keys.model)
 
@@ -195,7 +208,7 @@ final class TranslatePanelViewTests: XCTestCase {
         let mock = MockURLSession()
         mock.mockData = #"{"data":[]}"#.data(using: .utf8)
         mock.mockResponse = MockURLSession.successResponse()
-        let svc = ModelListService(session: mock)
+        let svc = ModelListService(session: mock, defaults: testSuite)
         TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
         TranslationConfiguration.persisted.set("/model", forKey: TranslationConfiguration.Keys.model)
 

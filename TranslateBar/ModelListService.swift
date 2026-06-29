@@ -7,9 +7,12 @@ final class ModelListService: ObservableObject {
     @Published var errorMessage: String?
 
     private let session: URLSessionProtocol
+    private let defaults: UserDefaults
 
-    init(session: URLSessionProtocol = URLSession.shared) {
+    init(session: URLSessionProtocol = URLSession.shared,
+         defaults: UserDefaults = TranslationConfiguration.persisted) {
         self.session = session
+        self.defaults = defaults
     }
 
     func fetchModels() async {
@@ -17,7 +20,7 @@ final class ModelListService: ObservableObject {
         errorMessage = nil
 
         do {
-            let configuration = TranslationConfiguration.current()
+            let configuration = TranslationConfiguration.current(defaults: self.defaults)
 
             // DeepSeek 缺 key 时直接设错误，不发网络请求
             if configuration.provider == .deepseek {

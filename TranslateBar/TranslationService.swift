@@ -10,9 +10,12 @@ final class TranslationService: ObservableObject {
     private var currentTask: Task<Void, Never>?
     private var currentTranslateId: UUID?
     private let session: URLSessionProtocol
+    private let defaults: UserDefaults
 
-    init(session: URLSessionProtocol = URLSession.shared) {
+    init(session: URLSessionProtocol = URLSession.shared,
+         defaults: UserDefaults = TranslationConfiguration.persisted) {
         self.session = session
+        self.defaults = defaults
     }
 
     func translate(text: String, mode: TranslationMode) {
@@ -250,7 +253,8 @@ final class TranslationService: ObservableObject {
         return String(data: data, encoding: .utf8)?.prefix(500).description ?? "Unknown error"
     }
 
-    func makeConfiguration(defaults: UserDefaults = TranslationConfiguration.persisted) throws -> TranslationConfiguration {
+    func makeConfiguration(defaults: UserDefaults? = nil) throws -> TranslationConfiguration {
+        let defaults = defaults ?? self.defaults
         let configuration = TranslationConfiguration.current(defaults: defaults)
 
         if configuration.endpointString.isEmpty {
@@ -297,7 +301,8 @@ final class TranslationService: ObservableObject {
         }
     }
 
-    func readableError(_ error: Error) -> String {
+    func readableError(_ error: Error, defaults: UserDefaults? = nil) -> String {
+        let defaults = defaults ?? self.defaults
         if let translationError = error as? TranslationError {
             return translationError.localizedDescription
         }
@@ -305,7 +310,7 @@ final class TranslationService: ObservableObject {
         if let urlError = error as? URLError {
             switch urlError.code {
             case .cannotConnectToHost, .notConnectedToInternet, .networkConnectionLost:
-                let config = TranslationConfiguration.current()
+                let config = TranslationConfiguration.current(defaults: defaults)
                 if config.provider == .deepseek {
                     return "无法连接 DeepSeek 翻译服务，请检查网络、API key 或 \(config.endpointString)。"
                 }
