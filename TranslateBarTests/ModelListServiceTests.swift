@@ -10,17 +10,17 @@ final class ModelListServiceTests: XCTestCase {
         super.setUp()
         mockSession = MockURLSession()
         service = ModelListService(session: mockSession)
-        UserDefaults.standard.set("local", forKey: TranslationConfiguration.Keys.provider)
-        UserDefaults.standard.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        UserDefaults.standard.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
+        TranslationConfiguration.persisted.set("local", forKey: TranslationConfiguration.Keys.provider)
+        TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        TranslationConfiguration.persisted.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
     }
 
     override func tearDown() {
-        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.provider)
-        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
-        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.model)
-        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.cloudAPIKey)
-        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.provider)
+        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
+        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.model)
+        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.cloudEndpoint)
         mockSession = nil
         service = nil
         super.tearDown()
@@ -56,7 +56,7 @@ final class ModelListServiceTests: XCTestCase {
     // MARK: - fetchModels errors
 
     func test_fetchModels_invalidEndpoint() async {
-        UserDefaults.standard.set("not-a-url", forKey: TranslationConfiguration.Keys.endpoint)
+        TranslationConfiguration.persisted.set("not-a-url", forKey: TranslationConfiguration.Keys.endpoint)
 
         await service.fetchModels()
 
@@ -111,9 +111,9 @@ final class ModelListServiceTests: XCTestCase {
     // MARK: - DeepSeek auth
 
     func test_fetchModels_deepseekAddsAuthorizationHeader() async {
-        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
-        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
-        UserDefaults.standard.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        TranslationConfiguration.persisted.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        TranslationConfiguration.persisted.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        TranslationConfiguration.persisted.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
 
         let json = #"{"data":[{"id":"deepseek-chat"}]}"#
         mockSession.mockData = json.data(using: .utf8)
@@ -139,8 +139,8 @@ final class ModelListServiceTests: XCTestCase {
     }
 
     func test_fetchModels_deepseekMissingAPIKeyDoesNotRequest() async {
-        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
-        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        TranslationConfiguration.persisted.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        TranslationConfiguration.persisted.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
         // 不设置 API key
 
         await service.fetchModels()

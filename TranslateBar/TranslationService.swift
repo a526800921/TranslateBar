@@ -250,7 +250,7 @@ final class TranslationService: ObservableObject {
         return String(data: data, encoding: .utf8)?.prefix(500).description ?? "Unknown error"
     }
 
-    func makeConfiguration(defaults: UserDefaults = .standard) throws -> TranslationConfiguration {
+    func makeConfiguration(defaults: UserDefaults = TranslationConfiguration.persisted) throws -> TranslationConfiguration {
         let configuration = TranslationConfiguration.current(defaults: defaults)
 
         if configuration.endpointString.isEmpty {

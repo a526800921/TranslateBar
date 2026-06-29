@@ -1,6 +1,8 @@
 import Foundation
 
 struct TranslationConfiguration {
+    /// 固定 suite 共享 UserDefaults，避免 ad-hoc 签名变化导致存储域丢失
+    static let persisted = UserDefaults(suiteName: "com.translatebar.app") ?? .standard
     enum Keys {
         static let endpoint = "translationEndpoint"
         static let model = "translationModel"
@@ -44,7 +46,7 @@ struct TranslationConfiguration {
         return components?.url
     }
 
-    static func current(defaults: UserDefaults = .standard) -> TranslationConfiguration {
+    static func current(defaults: UserDefaults = persisted) -> TranslationConfiguration {
         let providerRaw = defaults.string(forKey: Keys.provider) ?? ""
         let provider = TranslationProvider(rawValue: providerRaw) ?? defaultProvider
 

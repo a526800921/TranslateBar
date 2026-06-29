@@ -8,15 +8,15 @@ final class TranslatePanelViewTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        UserDefaults.standard.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        UserDefaults.standard.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
-        UserDefaults.standard.set(false, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        TranslationConfiguration.persisted.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
+        TranslationConfiguration.persisted.set(false, forKey: TranslationConfiguration.Keys.streamingEnabled)
     }
 
     override func tearDown() {
-        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
-        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.model)
-        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.streamingEnabled)
+        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
+        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.model)
+        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.streamingEnabled)
         super.tearDown()
     }
 
@@ -80,12 +80,12 @@ final class TranslatePanelViewTests: XCTestCase {
     func test_fullBodyDefault() { render(TranslatePanelView()) }
 
     func test_fullBodyStreamingEnabled() {
-        UserDefaults.standard.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        TranslationConfiguration.persisted.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
         render(TranslatePanelView())
     }
 
     func test_fullBodyCustomEndpoint() {
-        UserDefaults.standard.set("http://example.com:8080/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        TranslationConfiguration.persisted.set("http://example.com:8080/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
         render(TranslatePanelView())
     }
 
@@ -182,8 +182,8 @@ final class TranslatePanelViewTests: XCTestCase {
         mock.mockData = #"{"data":[{"id":"model-1"},{"id":"model-2"}]}"#.data(using: .utf8)
         mock.mockResponse = MockURLSession.successResponse()
         let svc = ModelListService(session: mock)
-        UserDefaults.standard.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        UserDefaults.standard.set("/model", forKey: TranslationConfiguration.Keys.model)
+        TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        TranslationConfiguration.persisted.set("/model", forKey: TranslationConfiguration.Keys.model)
 
         await svc.fetchModels()
         XCTAssertEqual(svc.models, ["model-1", "model-2"])
@@ -196,8 +196,8 @@ final class TranslatePanelViewTests: XCTestCase {
         mock.mockData = #"{"data":[]}"#.data(using: .utf8)
         mock.mockResponse = MockURLSession.successResponse()
         let svc = ModelListService(session: mock)
-        UserDefaults.standard.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        UserDefaults.standard.set("/model", forKey: TranslationConfiguration.Keys.model)
+        TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        TranslationConfiguration.persisted.set("/model", forKey: TranslationConfiguration.Keys.model)
 
         await svc.fetchModels()
         XCTAssertTrue(svc.models.isEmpty)
