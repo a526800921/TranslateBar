@@ -73,7 +73,6 @@ static let provider = "translationProvider"
 static let cloudAPIKey = "translationCloudAPIKey"
 static let cloudEndpoint = "translationCloudEndpoint"
 static let cloudModel = "translationCloudModel"
-static let cloudDisableThinking = "translationCloudDisableThinking"
 static let cloudTimeoutSeconds = "translationCloudTimeoutSeconds"
 ```
 
@@ -83,7 +82,6 @@ static let cloudTimeoutSeconds = "translationCloudTimeoutSeconds"
 static let defaultProvider = TranslationProvider.local
 static let defaultCloudEndpoint = "https://api.deepseek.com/v1/chat/completions"
 static let defaultCloudModel = "deepseek-v4-flash"
-static let defaultCloudDisableThinking = true
 static let defaultCloudTimeoutSeconds = 30.0
 ```
 
@@ -259,7 +257,7 @@ DeepSeek 模式：
 - 显示 DeepSeek endpoint，只读或可编辑均可，第一版建议可编辑但默认固定。
 - 显示模型：默认 `deepseek-v4-flash`
 - 使用 `SecureField` 输入 API key，并持久化保存到 `UserDefaults`
-- 显示“关闭思考”开关，默认开启
+- 不显示“关闭思考”开关；本地和云端请求都固定发送 `chat_template_kwargs.enable_thinking=false`
 - 不显示 API key 明文；可提供“清除 API Key”按钮
 - 可显示 key 状态：`已检测到 API Key` / `未检测到 API Key`
 

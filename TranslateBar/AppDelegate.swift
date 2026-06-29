@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let size = NSSize(width: 22, height: 22)
         let image = NSImage(size: size)
         image.isTemplate = true
+        image.accessibilityDescription = "TranslateBar"
 
         image.lockFocus()
 
