@@ -5,31 +5,23 @@ import AppKit
 
 @MainActor
 final class TranslatePanelViewTests: XCTestCase {
-    /// 保存测试前真实 persisted 中的 API Key，tearDown 恢复
-    private var savedAPIKey: String?
-    /// ModelListService 直接测试用隔离 suite
+    /// 测试用隔离 UserDefaults suite
     private var testSuite: UserDefaults!
 
     override func setUp() {
         super.setUp()
         testSuite = UserDefaults(suiteName: "com.translatebar.tests")
         testSuite.removePersistentDomain(forName: "com.translatebar.tests")
-        savedAPIKey = TranslationConfiguration.persisted.string(forKey: TranslationConfiguration.Keys.cloudAPIKey)
-        TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
-        TranslationConfiguration.persisted.set(false, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        // 写入测试默认值到隔离 suite，不碰真实 persisted
+        testSuite.set(TranslationProvider.local.rawValue, forKey: TranslationConfiguration.Keys.provider)
+        testSuite.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        testSuite.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
+        testSuite.set(false, forKey: TranslationConfiguration.Keys.streamingEnabled)
     }
 
     override func tearDown() {
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.model)
-        TranslationConfiguration.persisted.removeObject(forKey: TranslationConfiguration.Keys.streamingEnabled)
         testSuite.removePersistentDomain(forName: "com.translatebar.tests")
         testSuite = nil
-        // 恢复真实 API Key（如果测试前有的话）
-        if let key = savedAPIKey {
-            TranslationConfiguration.persisted.set(key, forKey: TranslationConfiguration.Keys.cloudAPIKey)
-        }
         super.tearDown()
     }
 
@@ -90,31 +82,31 @@ final class TranslatePanelViewTests: XCTestCase {
 
     // MARK: - Full body in various states
 
-    func test_fullBodyDefault() { render(TranslatePanelView()) }
+    func test_fullBodyDefault() { render(TranslatePanelView(defaults: testSuite)) }
 
     func test_fullBodyStreamingEnabled() {
-        TranslationConfiguration.persisted.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
-        render(TranslatePanelView())
+        testSuite.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
+        render(TranslatePanelView(defaults: testSuite))
     }
 
     func test_fullBodyCustomEndpoint() {
-        TranslationConfiguration.persisted.set("http://example.com:8080/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        render(TranslatePanelView())
+        testSuite.set("http://example.com:8080/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        render(TranslatePanelView(defaults: testSuite))
     }
 
     func test_fullBodyMultipleTimes() {
-        for _ in 0..<3 { render(TranslatePanelView()) }
+        for _ in 0..<3 { render(TranslatePanelView(defaults: testSuite)) }
     }
 
     // MARK: - Subview rendering (internal access)
 
-    func test_headerRenders() { render(TranslatePanelView().header) }
-    func test_settingsRenders() { render(TranslatePanelView().settingsArea) }
-    func test_inputRenders() { render(TranslatePanelView().inputArea) }
-    func test_resultRenders() { render(TranslatePanelView().resultArea) }
+    func test_headerRenders() { render(TranslatePanelView(defaults: testSuite).header) }
+    func test_settingsRenders() { render(TranslatePanelView(defaults: testSuite).settingsArea) }
+    func test_inputRenders() { render(TranslatePanelView(defaults: testSuite).inputArea) }
+    func test_resultRenders() { render(TranslatePanelView(defaults: testSuite).resultArea) }
 
     func test_allSubviewsRender() {
-        let v = TranslatePanelView()
+        let v = TranslatePanelView(defaults: testSuite)
         render(v.header)
         render(v.settingsArea)
         render(v.inputArea)
@@ -124,7 +116,7 @@ final class TranslatePanelViewTests: XCTestCase {
     // MARK: - Service state injection via Mirror
 
     func test_resultWithTranslationSet() {
-        var v = TranslatePanelView()
+        var v = TranslatePanelView(defaults: testSuite)
         let m = Mirror(reflecting: v)
         for c in m.children {
             if let svc = c.value as? TranslationService {
@@ -136,7 +128,7 @@ final class TranslatePanelViewTests: XCTestCase {
     }
 
     func test_resultWithError() {
-        var v = TranslatePanelView()
+        var v = TranslatePanelView(defaults: testSuite)
         let m = Mirror(reflecting: v)
         for c in m.children {
             if let svc = c.value as? TranslationService {
@@ -148,7 +140,7 @@ final class TranslatePanelViewTests: XCTestCase {
     }
 
     func test_resultLoading() {
-        var v = TranslatePanelView()
+        var v = TranslatePanelView(defaults: testSuite)
         let m = Mirror(reflecting: v)
         for c in m.children {
             if let svc = c.value as? TranslationService {
@@ -159,7 +151,7 @@ final class TranslatePanelViewTests: XCTestCase {
     }
 
     func test_resultEmpty() {
-        var v = TranslatePanelView()
+        var v = TranslatePanelView(defaults: testSuite)
         let m = Mirror(reflecting: v)
         for c in m.children {
             if let svc = c.value as? TranslationService {
@@ -172,7 +164,7 @@ final class TranslatePanelViewTests: XCTestCase {
     }
 
     func test_bodyWithAllServiceStates() {
-        var v = TranslatePanelView()
+        var v = TranslatePanelView(defaults: testSuite)
         // Setup services
         let m = Mirror(reflecting: v)
         for c in m.children {
@@ -195,8 +187,8 @@ final class TranslatePanelViewTests: XCTestCase {
         mock.mockData = #"{"data":[{"id":"model-1"},{"id":"model-2"}]}"#.data(using: .utf8)
         mock.mockResponse = MockURLSession.successResponse()
         let svc = ModelListService(session: mock, defaults: testSuite)
-        TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.set("/model", forKey: TranslationConfiguration.Keys.model)
+        testSuite.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        testSuite.set("/model", forKey: TranslationConfiguration.Keys.model)
 
         await svc.fetchModels()
         XCTAssertEqual(svc.models, ["model-1", "model-2"])
@@ -209,8 +201,8 @@ final class TranslatePanelViewTests: XCTestCase {
         mock.mockData = #"{"data":[]}"#.data(using: .utf8)
         mock.mockResponse = MockURLSession.successResponse()
         let svc = ModelListService(session: mock, defaults: testSuite)
-        TranslationConfiguration.persisted.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
-        TranslationConfiguration.persisted.set("/model", forKey: TranslationConfiguration.Keys.model)
+        testSuite.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
+        testSuite.set("/model", forKey: TranslationConfiguration.Keys.model)
 
         await svc.fetchModels()
         XCTAssertTrue(svc.models.isEmpty)

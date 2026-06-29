@@ -5,15 +5,11 @@ struct TranslatePanelView: View {
     @StateObject private var service: TranslationService
     @StateObject private var loginItemService = LoginItemService()
     @StateObject private var modelListService: ModelListService
-    @AppStorage(TranslationConfiguration.Keys.provider, store: TranslationConfiguration.persisted) private var provider = TranslationProvider.local.rawValue
-    @AppStorage(TranslationConfiguration.Keys.endpoint, store: TranslationConfiguration.persisted) private var endpoint = TranslationConfiguration.defaultEndpoint
-    @AppStorage(TranslationConfiguration.Keys.model, store: TranslationConfiguration.persisted) private var model = TranslationConfiguration.defaultModel
-    @AppStorage(TranslationConfiguration.Keys.streamingEnabled, store: TranslationConfiguration.persisted) private var streamingEnabled = false
-    @AppStorage(TranslationConfiguration.Keys.cloudEndpoint, store: TranslationConfiguration.persisted) private var cloudEndpoint = TranslationConfiguration.defaultCloudEndpoint
-    @AppStorage(TranslationConfiguration.Keys.cloudModel, store: TranslationConfiguration.persisted) private var cloudModel = TranslationConfiguration.defaultCloudModel
-    @AppStorage(TranslationConfiguration.Keys.cloudAPIKey, store: TranslationConfiguration.persisted) private var cloudAPIKey = ""
+    @StateObject private var settings: TranslatePanelSettings
 
     init(defaults: UserDefaults = TranslationConfiguration.persisted) {
+        let settings = TranslatePanelSettings(defaults: defaults)
+        _settings = StateObject(wrappedValue: settings)
         _service = StateObject(wrappedValue: TranslationService(defaults: defaults))
         _modelListService = StateObject(wrappedValue: ModelListService(defaults: defaults))
     }
@@ -23,7 +19,7 @@ struct TranslatePanelView: View {
     @State private var showsSettings = false
 
     private var currentProvider: TranslationProvider {
-        TranslationProvider(rawValue: provider) ?? .local
+        TranslationProvider(rawValue: settings.provider) ?? .local
     }
 
     var body: some View {
@@ -92,10 +88,10 @@ struct TranslatePanelView: View {
                 Spacer()
 
                 Button("恢复默认") {
-                    endpoint = TranslationConfiguration.defaultEndpoint
-                    model = TranslationConfiguration.defaultModel
-                    cloudEndpoint = TranslationConfiguration.defaultCloudEndpoint
-                    cloudModel = TranslationConfiguration.defaultCloudModel
+                    settings.endpoint = TranslationConfiguration.defaultEndpoint
+                    settings.model = TranslationConfiguration.defaultModel
+                    settings.cloudEndpoint = TranslationConfiguration.defaultCloudEndpoint
+                    settings.cloudModel = TranslationConfiguration.defaultCloudModel
                     // 不自动清空 API key
                     service.cancel()
                     service.errorMessage = nil
@@ -108,13 +104,13 @@ struct TranslatePanelView: View {
                 Text("翻译服务")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Picker("", selection: $provider) {
+                Picker("", selection: $settings.provider) {
                     ForEach(TranslationProvider.allCases) { p in
                         Text(p.displayName).tag(p.rawValue)
                     }
                 }
                 .pickerStyle(.segmented)
-                .onChange(of: provider) { _, _ in
+                .onChange(of: settings.provider) { _, _ in
                     service.cancel()
                     service.errorMessage = nil
                 }
@@ -167,7 +163,7 @@ struct TranslatePanelView: View {
                     .foregroundStyle(.secondary)
                 TextField(
                     "http://127.0.0.1:8787/v1/chat/completions",
-                    text: $endpoint
+                    text: $settings.endpoint
                 )
                 .textFieldStyle(.roundedBorder)
             }
@@ -181,11 +177,11 @@ struct TranslatePanelView: View {
                     if modelListService.models.isEmpty {
                         TextField(
                             "/Users/jafish/Documents/models/Hy-MT2-7B-4bit",
-                            text: $model
+                            text: $settings.model
                         )
                         .textFieldStyle(.roundedBorder)
                     } else {
-                        Picker("", selection: $model) {
+                        Picker("", selection: $settings.model) {
                             ForEach(modelListService.models, id: \.self) { modelId in
                                 Text(modelId).tag(modelId)
                             }
@@ -220,9 +216,9 @@ struct TranslatePanelView: View {
                 Task { await modelListService.fetchModels() }
             }
 
-            Toggle("流式输出", isOn: $streamingEnabled)
+            Toggle("流式输出", isOn: $settings.streamingEnabled)
                 .toggleStyle(.switch)
-                .onChange(of: streamingEnabled) {
+                .onChange(of: settings.streamingEnabled) {
                     service.cancel()
                 }
         }
@@ -238,7 +234,7 @@ struct TranslatePanelView: View {
                     .foregroundStyle(.secondary)
                 TextField(
                     "https://api.deepseek.com/v1/chat/completions",
-                    text: $cloudEndpoint
+                    text: $settings.cloudEndpoint
                 )
                 .textFieldStyle(.roundedBorder)
             }
@@ -252,11 +248,11 @@ struct TranslatePanelView: View {
                     if modelListService.models.isEmpty {
                         TextField(
                             "deepseek-v4-flash",
-                            text: $cloudModel
+                            text: $settings.cloudModel
                         )
                         .textFieldStyle(.roundedBorder)
                     } else {
-                        Picker("", selection: $cloudModel) {
+                        Picker("", selection: $settings.cloudModel) {
                             ForEach(modelListService.models, id: \.self) { modelId in
                                 Text(modelId).tag(modelId)
                             }
@@ -297,27 +293,27 @@ struct TranslatePanelView: View {
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 4) {
-                    SecureField("sk-...", text: $cloudAPIKey)
+                    SecureField("sk-...", text: $settings.cloudAPIKey)
                         .textFieldStyle(.roundedBorder)
 
                     Button {
-                        cloudAPIKey = ""
+                        settings.cloudAPIKey = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                     }
                     .buttonStyle(.plain)
-                    .disabled(cloudAPIKey.isEmpty)
+                    .disabled(settings.cloudAPIKey.isEmpty)
                     .help("清除 API Key")
                 }
 
-                Text(cloudAPIKey.isEmpty ? "未检测到 API Key" : "已检测到 API Key")
+                Text(settings.cloudAPIKey.isEmpty ? "未检测到 API Key" : "已检测到 API Key")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Toggle("流式输出", isOn: $streamingEnabled)
+            Toggle("流式输出", isOn: $settings.streamingEnabled)
                 .toggleStyle(.switch)
-                .onChange(of: streamingEnabled) {
+                .onChange(of: settings.streamingEnabled) {
                     service.cancel()
                 }
         }
