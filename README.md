@@ -6,8 +6,8 @@ macOS 菜单栏翻译 App，支持本地模型和 DeepSeek 云端模型的中英
 
 ```bash
 git clone https://github.com/a526800921/TranslateBar.git
-xattr -cr TranslateBar/TranslateBar.app
-open TranslateBar/TranslateBar.app
+xattr -cr TranslateBar/.dist/TranslateBar.app
+open TranslateBar/.dist/TranslateBar.app
 ```
 
 启动后在设置中切换到 DeepSeek 并填写 API Key 即可使用。
