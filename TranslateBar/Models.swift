@@ -111,14 +111,34 @@ enum TranslationMode: String, CaseIterable, Identifiable {
         case .enToZh:
             return "Chinese"
         case .auto:
-            return containsChinese(text) ? "English" : "Chinese"
+            return isMostlyChinese(text) ? "English" : "Chinese"
         }
     }
 
-    private func containsChinese(_ text: String) -> Bool {
-        text.unicodeScalars.contains { scalar in
+    /// 统计 CJK 汉字和拉丁字母数量，按占比判断主语言。
+    /// 满足以下任一条件时判定为英文主导 → 不翻成英文：
+    /// - 没有中文字符
+    /// - 中文 ≤2 个且英文 ≥10 个（中文只是引用/图标名）
+    /// - 中文占比 < 30%
+    private func isMostlyChinese(_ text: String) -> Bool {
+        let scalars = text.unicodeScalars
+        let chineseCount = scalars.filter { scalar in
             (0x4E00...0x9FFF).contains(scalar.value)
+        }.count
+        let latinCount = scalars.filter { scalar in
+            (0x41...0x5A).contains(scalar.value) ||
+            (0x61...0x7A).contains(scalar.value)
+        }.count
+
+        guard chineseCount + latinCount > 0 else {
+            return false
         }
+
+        if chineseCount <= 2, latinCount >= 10 {
+            return false
+        }
+
+        return Double(chineseCount) / Double(chineseCount + latinCount) >= 0.3
     }
 }
 

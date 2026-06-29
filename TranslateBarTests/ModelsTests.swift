@@ -212,31 +212,78 @@ final class ModelsTests: XCTestCase {
         XCTAssertEqual(TranslationMode.auto.targetDescription(for: "12345"), "Chinese")
     }
 
-    func test_containsChinese_pureChinese() {
+    func test_isMostlyChinese_pureChinese() {
         let mode = TranslationMode.auto
         XCTAssertEqual(mode.targetDescription(for: "你好"), "English")
     }
 
-    func test_containsChinese_mixedCNandEN() {
+    func test_isMostlyChinese_pureEnglish() {
         let mode = TranslationMode.auto
-        XCTAssertEqual(mode.targetDescription(for: "Hello 世界"), "English")
+        XCTAssertEqual(mode.targetDescription(for: "Hello world"), "Chinese")
     }
 
-    func test_containsChinese_boundary0x4E00() {
+    func test_isMostlyChinese_boundary0x4E00() {
         let mode = TranslationMode.auto
         let char = String(UnicodeScalar(0x4E00)!)
         XCTAssertEqual(mode.targetDescription(for: char), "English")
     }
 
-    func test_containsChinese_boundary0x9FFF() {
+    func test_isMostlyChinese_boundary0x9FFF() {
         let mode = TranslationMode.auto
         let char = String(UnicodeScalar(0x9FFF)!)
         XCTAssertEqual(mode.targetDescription(for: char), "English")
     }
 
-    func test_containsChinese_emptyString() {
+    func test_isMostlyChinese_emptyString() {
         let mode = TranslationMode.auto
         XCTAssertEqual(mode.targetDescription(for: ""), "Chinese")
+    }
+
+    func test_isMostlyChinese_numbersOnly() {
+        let mode = TranslationMode.auto
+        XCTAssertEqual(mode.targetDescription(for: "12345"), "Chinese")
+    }
+
+    // MARK: - isMostlyChinese 占比规则
+
+    func test_isMostlyChinese_singleChineseInEnglish() {
+        let mode = TranslationMode.auto
+        // chineseCount=1, latinCount≥10 → 中文只是引用 → target Chinese
+        XCTAssertEqual(mode.targetDescription(for: "App has started with character 译 icon"), "Chinese")
+    }
+
+    func test_isMostlyChinese_twoChineseInLongEnglish() {
+        let mode = TranslationMode.auto
+        // chineseCount=2, latinCount≥10 → short-text rule → target Chinese
+        XCTAssertEqual(mode.targetDescription(for: "This application supports translation 中文 English"), "Chinese")
+    }
+
+    func test_isMostlyChinese_step0Sample() {
+        let mode = TranslationMode.auto
+        let text = """
+        App has started. Now it's the "译" character icon with regular font weight + rounded border, see the effect?
+        """
+        // chineseCount=1, latinCount≥10 → 英文主导夹带中文引用 → target Chinese
+        XCTAssertEqual(mode.targetDescription(for: text), "Chinese")
+    }
+
+    func test_isMostlyChinese_helloWorldMixed() {
+        let mode = TranslationMode.auto
+        // "Hello 世界": chineseCount=2, latinCount=5 → 2/(2+5)=28.6% < 30% → target Chinese
+        XCTAssertEqual(mode.targetDescription(for: "Hello 世界"), "Chinese")
+    }
+
+    func test_isMostlyChinese_chineseDominant() {
+        let mode = TranslationMode.auto
+        // "你好 world": chineseCount=2, latinCount=5 → 2/7=28.6% < 30% → target Chinese
+        // Need a case with 30%+: "你好你好 world" → 4/(4+5)=44.4% → target English
+        XCTAssertEqual(mode.targetDescription(for: "你好你好 world"), "English")
+    }
+
+    func test_isMostlyChinese_chineseMajorInMix() {
+        let mode = TranslationMode.auto
+        // "你好你好你好你好 world": 8/(8+5)=61.5% → target English
+        XCTAssertEqual(mode.targetDescription(for: "你好你好你好你好 world"), "English")
     }
 
     // MARK: - TranslationError

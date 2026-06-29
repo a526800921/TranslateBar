@@ -24,6 +24,7 @@
 | [model-list-selection](plans/model-list-selection.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0](plans/model-list-selection.md#step-0-证据)，[完成标准](plans/model-list-selection.md#完成标准)，[测试覆盖率](plans/model-list-selection.md#测试覆盖率) |
 | [streaming-translation](plans/streaming-translation.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0](plans/streaming-translation.md#step-0-证据)，[完成标准](plans/streaming-translation.md#完成标准)，[测试覆盖率](plans/streaming-translation.md#测试覆盖率) |
 | [deepseek-cloud-support-implementation](plans/deepseek-cloud-support-implementation.md) | 已完成 | 全部实施完成 | streaming-translation, model-list-selection | [Step 0](plans/deepseek-cloud-support-implementation.md#实施目标)，[完成条件](plans/deepseek-cloud-support-implementation.md#完成条件)，[测试 15 用例全部通过](#验证命令) |
+| [auto-language-detection](plans/auto-language-detection.md) | 已完成 | 主语言占比规则 | translatebar-v1, unit-test-coverage | [Step 0](plans/auto-language-detection.md#step-0-证据)，[完成条件](plans/auto-language-detection.md#完成条件)，[验证方式](plans/auto-language-detection.md#验证方式) |
 | [unit-test-coverage](plans/unit-test-coverage.md) | 已完成 | Phase 0-3 已完成 | translatebar-v1, service-settings-and-install, install-cleanup-and-login-item, model-list-selection, streaming-translation | [Step 0](plans/unit-test-coverage.md#step-0-证据)，[完成标准](plans/unit-test-coverage.md#完成标准)，[测试覆盖率](plans/unit-test-coverage.md#测试覆盖率) |
 
 允许的状态值：`候选`、`设计中`、`待实施`、`实施中`、`已完成`、`已替代`、`已合并`、`已废弃`。
@@ -37,6 +38,7 @@
 5. `streaming-translation`
 6. `unit-test-coverage`
 7. `deepseek-cloud-support-implementation`
+8. `auto-language-detection`
 
 ## 依赖关系
 
@@ -56,6 +58,8 @@
 | unit-test-coverage | streaming-translation | 测试覆盖需要覆盖 SSE chunk 解码、流式成功路径、keepalive 跳过和非流式 fallback。 |
 | deepseek-cloud-support-implementation | streaming-translation | DeepSeek 支持复用已实现的流式/非流式双路径、模型列表服务和错误显示框架。 |
 | deepseek-cloud-support-implementation | model-list-selection | DeepSeek 模型列表读取依赖已实现的 `/v1/models` 解析和 Picker 选择组件。 |
+| auto-language-detection | translatebar-v1 | 自动模式是 v1 的核心翻译模式，需要保留显式中译英/英译中行为不变。 |
+| auto-language-detection | unit-test-coverage | 主语言占比规则需要通过 `ModelsTests` 和必要的 prompt 测试固定回归样本。 |
 
 ## 替换、合并与废弃
 
@@ -68,6 +72,7 @@
 | model-list-selection | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 将模型路径手动输入扩展为从 `/v1/models` 读取和选择。 |
 | streaming-translation | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 将非流式翻译扩展为可选流式输出。 |
 | deepseek-cloud-support-implementation | 扩展 | [streaming-translation](plans/streaming-translation.md) | 将本地单 provider 架构扩展为多 provider（本地 + DeepSeek 云端），复用流式/非流式双路径和模型列表组件。 |
+| auto-language-detection | 扩展 | [translatebar-v1](plans/translatebar-v1.md) | 将 v1 的“包含任意中文即翻英”自动检测规则扩展为主语言占比判断，减少英文主文本夹带中文字符时的误判。 |
 | unit-test-coverage | 来源 | [superpowers 单元测试覆盖率设计](superpowers/specs/2026-06-27-unit-test-coverage-design.md) | 将 superpowers 中的 90%+ 单元测试覆盖率功能计划合并进治理体系。 |
 
 ## 当前阻塞项
@@ -81,6 +86,7 @@
 | 后续构建可能重新注册 DerivedData 中的 `TranslateBar.app` | 已解决：`install-cleanup-and-login-item` 提供了 `scripts/install_app.sh`，构建后自动清理 DerivedData 重复产物并只保留 `~/Applications/TranslateBar.app`。 | 启动台搜索可能再次出现多个同名 App | 否 | 已解决 |
 | 模型列表接口的 endpoint 推导方式未验证 | 已解决：`model-list-selection` 已完成，`/v1/models` 响应为标准 OpenAI 格式（`data[].id`），`TranslationConfiguration.modelsEndpoint` 从 chat endpoint 推导。 | 模型列表可能请求到错误地址 | 否 | 已解决 |
 | 流式响应格式未验证 | 已解决：`streaming-translation` 已完成，SSE 为标准 OpenAI 格式（`choices[0].delta.content`，`[DONE]` 结束），`URLSession.AsyncBytes.lines` 逐行解析。 | parser 可能无法兼容服务输出 | 否 | 已解决 |
+| 自动语言检测遇到英文主文本夹带少量中文字符会误判 | 已解决：`auto-language-detection` 实施完成，用主语言占比替代”包含任意中文”规则。 | 自动模式可能把英文句子错误翻译为英文 | 否 | 已解决 |
 
 ## 证据链接
 
@@ -94,4 +100,5 @@
 | model-list-selection | [Step 0](plans/model-list-selection.md#step-0-证据)，[完成标准](plans/model-list-selection.md#完成标准)，[测试覆盖率](plans/model-list-selection.md#测试覆盖率) |
 | streaming-translation | [Step 0](plans/streaming-translation.md#step-0-证据)，[完成标准](plans/streaming-translation.md#完成标准)，[测试覆盖率](plans/streaming-translation.md#测试覆盖率) |
 | deepseek-cloud-support-implementation | [实施目标](plans/deepseek-cloud-support-implementation.md#实施目标)，[完成条件](plans/deepseek-cloud-support-implementation.md#完成条件) |
+| auto-language-detection | [Step 0](plans/auto-language-detection.md#step-0-证据)，[完成条件](plans/auto-language-detection.md#完成条件)，[验证方式](plans/auto-language-detection.md#验证方式) |
 | unit-test-coverage | [Step 0](plans/unit-test-coverage.md#step-0-证据)，[完成标准](plans/unit-test-coverage.md#完成标准)，[测试覆盖率](plans/unit-test-coverage.md#测试覆盖率) |
