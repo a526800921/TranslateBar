@@ -9,7 +9,6 @@ struct TranslationConfiguration {
         static let cloudAPIKey = "translationCloudAPIKey"
         static let cloudEndpoint = "translationCloudEndpoint"
         static let cloudModel = "translationCloudModel"
-        static let cloudDisableThinking = "translationCloudDisableThinking"
         static let cloudTimeoutSeconds = "translationCloudTimeoutSeconds"
     }
 
@@ -18,7 +17,6 @@ struct TranslationConfiguration {
     static let defaultProvider = TranslationProvider.local
     static let defaultCloudEndpoint = "https://api.deepseek.com/v1/chat/completions"
     static let defaultCloudModel = "deepseek-v4-flash"
-    static let defaultCloudDisableThinking = true
     static let defaultCloudTimeoutSeconds = 30.0
 
     let provider: TranslationProvider
@@ -26,7 +24,6 @@ struct TranslationConfiguration {
     let model: String
     let streamingEnabled: Bool
     let apiKey: String?
-    let disableThinking: Bool
     let timeoutInterval: TimeInterval
 
     var endpoint: URL? {
@@ -66,7 +63,6 @@ struct TranslationConfiguration {
         let streamingEnabled = defaults.bool(forKey: Keys.streamingEnabled)
         let apiKey = defaults.string(forKey: Keys.cloudAPIKey)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let disableThinking = defaults.object(forKey: Keys.cloudDisableThinking) as? Bool ?? defaultCloudDisableThinking
         let timeoutInterval: TimeInterval
         switch provider {
         case .local:
@@ -82,7 +78,6 @@ struct TranslationConfiguration {
             model: model.trimmingCharacters(in: .whitespacesAndNewlines),
             streamingEnabled: streamingEnabled,
             apiKey: apiKey,
-            disableThinking: disableThinking,
             timeoutInterval: timeoutInterval
         )
     }

@@ -12,7 +12,6 @@ struct TranslatePanelView: View {
     @AppStorage(TranslationConfiguration.Keys.cloudEndpoint) private var cloudEndpoint = TranslationConfiguration.defaultCloudEndpoint
     @AppStorage(TranslationConfiguration.Keys.cloudModel) private var cloudModel = TranslationConfiguration.defaultCloudModel
     @AppStorage(TranslationConfiguration.Keys.cloudAPIKey) private var cloudAPIKey = ""
-    @AppStorage(TranslationConfiguration.Keys.cloudDisableThinking) private var cloudDisableThinking = TranslationConfiguration.defaultCloudDisableThinking
     @State private var inputText = ""
     @State private var mode: TranslationMode = .auto
     @State private var autoTranslate = true
@@ -92,7 +91,6 @@ struct TranslatePanelView: View {
                     model = TranslationConfiguration.defaultModel
                     cloudEndpoint = TranslationConfiguration.defaultCloudEndpoint
                     cloudModel = TranslationConfiguration.defaultCloudModel
-                    cloudDisableThinking = TranslationConfiguration.defaultCloudDisableThinking
                     // 不自动清空 API key
                     service.cancel()
                     service.errorMessage = nil
@@ -317,9 +315,6 @@ struct TranslatePanelView: View {
                 .onChange(of: streamingEnabled) {
                     service.cancel()
                 }
-
-            Toggle("关闭思考", isOn: $cloudDisableThinking)
-                .toggleStyle(.switch)
         }
     }
 

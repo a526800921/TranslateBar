@@ -38,10 +38,6 @@ final class TranslationConfigurationTests: XCTestCase {
         XCTAssertEqual(TranslationConfiguration.defaultCloudModel, "deepseek-v4-flash")
     }
 
-    func test_defaultCloudDisableThinking() {
-        XCTAssertTrue(TranslationConfiguration.defaultCloudDisableThinking)
-    }
-
     func test_keysMatchAppStorage() {
         XCTAssertEqual(TranslationConfiguration.Keys.endpoint, "translationEndpoint")
         XCTAssertEqual(TranslationConfiguration.Keys.model, "translationModel")
@@ -50,7 +46,6 @@ final class TranslationConfigurationTests: XCTestCase {
         XCTAssertEqual(TranslationConfiguration.Keys.cloudAPIKey, "translationCloudAPIKey")
         XCTAssertEqual(TranslationConfiguration.Keys.cloudEndpoint, "translationCloudEndpoint")
         XCTAssertEqual(TranslationConfiguration.Keys.cloudModel, "translationCloudModel")
-        XCTAssertEqual(TranslationConfiguration.Keys.cloudDisableThinking, "translationCloudDisableThinking")
     }
 
     // MARK: - current(from:) — local provider
@@ -108,7 +103,6 @@ final class TranslationConfigurationTests: XCTestCase {
         XCTAssertEqual(config.endpointString, TranslationConfiguration.defaultCloudEndpoint)
         XCTAssertEqual(config.model, TranslationConfiguration.defaultCloudModel)
         XCTAssertNil(config.apiKey)
-        XCTAssertTrue(config.disableThinking)
     }
 
     func test_current_deepseekReadsAPIKeyFromDefaults() {
@@ -132,14 +126,6 @@ final class TranslationConfigurationTests: XCTestCase {
         // 不设置 API key
         let config = TranslationConfiguration.current(defaults: defaults)
         XCTAssertNil(config.apiKey)
-    }
-
-    func test_current_deepseekDisableThinkingFalse() {
-        defaults.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
-        defaults.set(false, forKey: TranslationConfiguration.Keys.cloudDisableThinking)
-
-        let config = TranslationConfiguration.current(defaults: defaults)
-        XCTAssertFalse(config.disableThinking)
     }
 
     // MARK: - endpoint (computed)
@@ -196,7 +182,6 @@ final class TranslationConfigurationTests: XCTestCase {
             model: model,
             streamingEnabled: false,
             apiKey: nil,
-            disableThinking: true,
             timeoutInterval: 120
         )
     }

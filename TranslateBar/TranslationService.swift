@@ -110,16 +110,6 @@ final class TranslationService: ObservableObject {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
 
-        let enableThinking: Bool
-        switch configuration.provider {
-        case .local:
-            // 本地始终关闭思考
-            enableThinking = false
-        case .deepseek:
-            // DeepSeek 由用户开关控制，默认关闭
-            enableThinking = !configuration.disableThinking
-        }
-
         let payload = ChatCompletionRequest(
             model: configuration.model,
             messages: [
@@ -129,7 +119,7 @@ final class TranslationService: ObservableObject {
             topP: 0.6,
             maxTokens: 4096,
             stream: stream,
-            chatTemplateKwargs: ChatTemplateKwargs(enableThinking: enableThinking)
+            chatTemplateKwargs: ChatTemplateKwargs(enableThinking: false)
         )
 
         request.httpBody = try JSONEncoder().encode(payload)
