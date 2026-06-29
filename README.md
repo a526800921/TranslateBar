@@ -1,31 +1,25 @@
 # TranslateBar
 
-TranslateBar 是一个 macOS 菜单栏翻译 App。它通过本机 OpenAI Chat Completions 兼容服务调用本地翻译模型，适合把常用中英互译固定在菜单栏里使用。
+TranslateBar 是一个 macOS 菜单栏翻译 App，支持本地模型和 DeepSeek 云端模型的中英互译。
 
-## 当前功能
+## 快速开始
 
-- 菜单栏常驻：App 启动后显示在 macOS 菜单栏，不占用 Dock 主窗口。
-- 中英互译：支持自动判断、中译英、英译中三种模式。
-- 自动翻译：输入内容变化后会自动防抖触发翻译，也可以手动点击“翻译”。
-- 结果复制：翻译结果可一键复制到剪贴板。
-- 服务配置：可在设置区修改 Chat Completions endpoint 和模型路径。
-- 模型列表：可从当前服务的 `/v1/models` 读取模型列表，并选择 `data[].id` 作为当前模型。
-- 流式输出：可在设置区开启流式输出，使用 SSE 增量显示翻译结果；默认关闭，非流式路径保留。
-- 登录时启动：可在设置区开启或关闭 macOS 登录项。
-- 安装清理：提供安装脚本，将 Release App 安装到 `~/Applications/TranslateBar.app`，并清理重复构建产物，避免启动台出现多个同名 App。
-
-## 运行要求
-
-- macOS 15.0 或更高版本。
-- Xcode。
-- 本地 OpenAI Chat Completions 兼容服务。
-
-默认服务配置：
-
-```text
-Endpoint: http://127.0.0.1:8787/v1/chat/completions
-Model: /Users/jafish/Documents/models/Hy-MT2-7B-4bit
+```bash
+git clone https://github.com/a526800921/TranslateBar.git
+xattr -cr TranslateBar/TranslateBar.app      # 移除 Gatekeeper 隔离
+open TranslateBar/TranslateBar.app           # 或直接双击
 ```
+
+启动后在设置中切换到 DeepSeek 并填写 API Key 即可使用。仅支持 **Apple Silicon (arm64)**，macOS 15.0+。
+
+## 翻译服务
+
+App 支持两种 provider，在设置中切换：
+
+| Provider | 说明 |
+|----------|------|
+| 本地 | 连接本机 OpenAI Chat Completions 兼容服务（`http://127.0.0.1:8787/v1/chat/completions`） |
+| DeepSeek | 云端 API（`https://api.deepseek.com/v1/chat/completions`），需填写 API Key |
 
 服务需要支持：
 
@@ -34,58 +28,21 @@ Model: /Users/jafish/Documents/models/Hy-MT2-7B-4bit
 - 可选流式响应：`stream: true`，SSE `data:` 行，增量路径 `choices[0].delta.content`，结束标记 `data: [DONE]`
 - 可选模型列表：`GET /v1/models`，模型 id 路径 `data[].id`
 
-## 安装
+## 当前功能
 
-在项目根目录执行：
-
-```bash
-./scripts/install_app.sh
-```
-
-脚本会执行以下操作：
-
-1. 构建 Release 版本。
-2. 安装到 `~/Applications/TranslateBar.app`。
-3. 清理 DerivedData 和项目根目录里的重复 `TranslateBar.app`。
-4. 重新注册 LaunchServices。
-5. 验证 App 签名和安装结果。
-
-安装后可启动：
-
-```bash
-open ~/Applications/TranslateBar.app
-```
-
-## 使用方式
-
-1. 启动 App 后，点击菜单栏里的 TranslateBar 图标。
-2. 在输入框中输入要翻译的文本。
-3. 选择“自动”“中译英”或“英译中”。
-4. 查看翻译结果，必要时点击“复制”。
-5. 点击齿轮按钮打开设置区，可修改服务地址、模型路径、刷新模型列表、开启流式输出或登录时启动。
+- 菜单栏常驻：点击”译”字图标弹出面板，不占用 Dock。
+- 中英互译：自动 / 中译英 / 英译中三种模式。
+- 自动翻译：300ms 防抖，输入停止后自动触发。
+- 流式输出：可选开启，SSE 增量显示翻译结果。
+- 模型列表：从 `/v1/models` 读取可用模型。
+- 登录时启动：可选开启或关闭。
 
 ## 开发
 
-Debug 构建与启动（一步到位）：
+构建与启动：
 
 ```bash
-./scripts/build_and_run.sh
-```
-
-单独 Debug 构建：
-
-```bash
-xcodebuild \
-  -project TranslateBar.xcodeproj \
-  -scheme TranslateBar \
-  -configuration Debug \
-  build
-```
-
-Release 安装建议统一使用：
-
-```bash
-./scripts/install_app.sh
+./scripts/build_and_run.sh    # Release 构建、启动，同时更新根目录 TranslateBar.app
 ```
 
 ## 测试
@@ -109,19 +66,13 @@ xcodebuild test \
 
 ## 计划文档
 
-项目使用轻量计划治理记录阶段交付：
-
 - [计划索引](docs/PLAN_MAP.md)
-- [v1 实现计划](docs/plans/translatebar-v1.md)
-- [服务设置与安装计划](docs/plans/service-settings-and-install.md)
-- [安装清理与登录项计划](docs/plans/install-cleanup-and-login-item.md)
-- [模型列表选择计划](docs/plans/model-list-selection.md)
-- [流式翻译计划](docs/plans/streaming-translation.md)
-- [单元测试覆盖率计划](docs/plans/unit-test-coverage.md)
+- [DeepSeek 云端支持](docs/plans/deepseek-cloud-support-implementation.md)
+- [自动语言检测](docs/plans/auto-language-detection.md)
+- 更多：`docs/plans/`
 
 ## 已知边界
 
 - App 不负责启动或管理本地模型服务。
-- App 不自动下载模型。
-- 当前产品范围主要面向中英互译。
-- 如果服务地址不是 `/v1/chat/completions` 结尾，App 无法自动推导 `/v1/models`，仍可手动填写模型路径。
+- 仅 arm64，Intel Mac 不支持。
+- Ad-hoc 签名，首次需 `xattr -cr` 移除 Gatekeeper 隔离。

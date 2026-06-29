@@ -18,6 +18,8 @@ xcodebuild \
     -derivedDataPath "$BUILD_DIR" \
     build
 
+echo "[INFO] 更新根目录 TranslateBar.app..."
+cp -r "$APP_BUNDLE" "$PROJECT_ROOT/TranslateBar.app"
 echo "[INFO] 启动：$APP_BUNDLE"
 open "$APP_BUNDLE"
 echo "[INFO] 完成"
