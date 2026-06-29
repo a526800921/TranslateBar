@@ -46,14 +46,12 @@ final class TranslationService: ObservableObject {
 
     private func performTranslation(text: String, mode: TranslationMode, id: UUID) async {
         guard currentTranslateId == id else { return }
-        let t0 = CFAbsoluteTimeGetCurrent()
 
         isLoading = true
         errorMessage = nil
 
         do {
             let configuration = try makeConfiguration()
-            let tConfig = CFAbsoluteTimeGetCurrent()
 
             guard let endpoint = configuration.endpoint else {
                 throw TranslationError.invalidEndpoint(configuration.endpointString)
@@ -65,8 +63,7 @@ final class TranslationService: ObservableObject {
                     mode: mode,
                     configuration: configuration,
                     endpoint: endpoint,
-                    id: id,
-                    tStart: t0
+                    id: id
                 )
             } else {
                 try await performNonStreamingTranslation(
@@ -74,8 +71,7 @@ final class TranslationService: ObservableObject {
                     mode: mode,
                     configuration: configuration,
                     endpoint: endpoint,
-                    id: id,
-                    tStart: t0
+                    id: id
                 )
             }
         } catch is CancellationError {
@@ -134,20 +130,15 @@ final class TranslationService: ObservableObject {
         configuration: TranslationConfiguration,
         endpoint: URL,
         id: UUID,
-        tStart: CFAbsoluteTime
     ) async throws {
-        let t0 = CFAbsoluteTimeGetCurrent()
         let request = try makeRequest(
             endpoint: endpoint,
             configuration: configuration,
             stream: false,
             prompt: makePrompt(text: text, mode: mode)
         )
-        let tReq = CFAbsoluteTimeGetCurrent()
 
         let (data, response) = try await session.data(for: request)
-        let tNet = CFAbsoluteTimeGetCurrent()
-        let networkMs = (tNet - tReq) * 1000
         guard currentTranslateId == id else { return }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -162,7 +153,6 @@ final class TranslationService: ObservableObject {
         }
 
         let decoded = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
-        let tParse = CFAbsoluteTimeGetCurrent()
         let content = decoded.choices.first?.message?.content ?? decoded.choices.first?.text
         let translatedText = content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
@@ -182,19 +172,15 @@ final class TranslationService: ObservableObject {
         configuration: TranslationConfiguration,
         endpoint: URL,
         id: UUID,
-        tStart: CFAbsoluteTime
     ) async throws {
-        let t0 = CFAbsoluteTimeGetCurrent()
         let request = try makeRequest(
             endpoint: endpoint,
             configuration: configuration,
             stream: true,
             prompt: makePrompt(text: text, mode: mode)
         )
-        let tReq = CFAbsoluteTimeGetCurrent()
 
         let (byteStream, response) = try await session.bytesStream(for: request)
-        let tConn = CFAbsoluteTimeGetCurrent()
         guard currentTranslateId == id else { return }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -216,9 +202,6 @@ final class TranslationService: ObservableObject {
 
         guard currentTranslateId == id else { return }
         result = ""
-        var firstToken = true
-        var firstTokenTime: CFAbsoluteTime = 0
-        var totalChars = 0
 
         for try await line in lines(from: byteStream) {
             guard currentTranslateId == id else { return }
@@ -233,22 +216,12 @@ final class TranslationService: ObservableObject {
             do {
                 let chunk = try JSONDecoder().decode(ChatCompletionChunk.self, from: jsonData)
                 if let content = chunk.choices.first?.delta?.content {
-                    if firstToken {
-                        firstTokenTime = CFAbsoluteTimeGetCurrent()
-                        let ttfb = (firstTokenTime - tReq) * 1000
-                        firstToken = false
-                    }
                     result += content
-                    totalChars += content.count
                 }
             } catch {
                 continue
             }
         }
-
-        let tEnd = CFAbsoluteTimeGetCurrent()
-        let totalMs = (tEnd - tStart) * 1000
-        let genMs = firstToken ? 0 : (tEnd - firstTokenTime) * 1000
 
         if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             guard currentTranslateId == id else { return }
