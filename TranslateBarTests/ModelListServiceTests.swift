@@ -10,13 +10,17 @@ final class ModelListServiceTests: XCTestCase {
         super.setUp()
         mockSession = MockURLSession()
         service = ModelListService(session: mockSession)
+        UserDefaults.standard.set("local", forKey: TranslationConfiguration.Keys.provider)
         UserDefaults.standard.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
         UserDefaults.standard.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
     }
 
     override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.provider)
         UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
         UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.model)
+        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.cloudEndpoint)
         mockSession = nil
         service = nil
         super.tearDown()
@@ -101,6 +105,50 @@ final class ModelListServiceTests: XCTestCase {
 
         XCTAssertFalse(service.isLoading)
         await service.fetchModels()
+        XCTAssertFalse(service.isLoading)
+    }
+
+    // MARK: - DeepSeek auth
+
+    func test_fetchModels_deepseekAddsAuthorizationHeader() async {
+        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        UserDefaults.standard.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
+
+        let json = #"{"data":[{"id":"deepseek-chat"}]}"#
+        mockSession.mockData = json.data(using: .utf8)
+        mockSession.mockResponse = MockURLSession.successResponse(url: URL(string: "https://api.deepseek.com/v1/models")!)
+
+        await service.fetchModels()
+
+        let lastRequest = mockSession.lastDataRequest
+        XCTAssertEqual(lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer sk-test-key")
+        XCTAssertEqual(service.models, ["deepseek-chat"])
+    }
+
+    func test_fetchModels_localDoesNotAddAuthorizationHeader() async {
+        // setUp already sets provider to "local"
+        let json = #"{"data":[{"id":"local-model"}]}"#
+        mockSession.mockData = json.data(using: .utf8)
+        mockSession.mockResponse = MockURLSession.successResponse()
+
+        await service.fetchModels()
+
+        let lastRequest = mockSession.lastDataRequest
+        XCTAssertNil(lastRequest?.value(forHTTPHeaderField: "Authorization"))
+    }
+
+    func test_fetchModels_deepseekMissingAPIKeyDoesNotRequest() async {
+        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        // 不设置 API key
+
+        await service.fetchModels()
+
+        // 不应该发网络请求，lastDataRequest 应保持为 nil
+        XCTAssertNil(mockSession.lastDataRequest)
+        XCTAssertNotNil(service.errorMessage)
+        XCTAssertTrue(service.errorMessage?.contains("API Key 未配置") ?? false)
         XCTAssertFalse(service.isLoading)
     }
 

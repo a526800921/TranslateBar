@@ -19,6 +19,15 @@ final class ModelListService: ObservableObject {
         do {
             let configuration = TranslationConfiguration.current()
 
+            // DeepSeek 缺 key 时直接设错误，不发网络请求
+            if configuration.provider == .deepseek {
+                guard let apiKey = configuration.apiKey, !apiKey.isEmpty else {
+                    errorMessage = "DeepSeek API Key 未配置，无法读取模型列表。"
+                    isLoading = false
+                    return
+                }
+            }
+
             guard let modelsURL = configuration.modelsEndpoint else {
                 errorMessage = "无法从服务地址推导模型列表地址。请确认服务地址以 /v1/chat/completions 结尾。"
                 isLoading = false
@@ -27,6 +36,11 @@ final class ModelListService: ObservableObject {
 
             var request = URLRequest(url: modelsURL)
             request.timeoutInterval = 30
+
+            // DeepSeek 带鉴权
+            if configuration.provider == .deepseek, let apiKey = configuration.apiKey {
+                request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            }
 
             let (data, response) = try await session.data(for: request)
 

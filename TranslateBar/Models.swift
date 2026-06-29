@@ -1,5 +1,25 @@
 import Foundation
 
+// MARK: - Provider
+
+enum TranslationProvider: String, CaseIterable, Identifiable {
+    case local
+    case deepseek
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .local:
+            return "本地"
+        case .deepseek:
+            return "DeepSeek"
+        }
+    }
+}
+
+// MARK: - Request
+
 struct ChatCompletionRequest: Encodable {
     let model: String
     let messages: [ChatMessage]
@@ -7,6 +27,7 @@ struct ChatCompletionRequest: Encodable {
     let topP: Double
     let maxTokens: Int
     let stream: Bool
+    let chatTemplateKwargs: ChatTemplateKwargs?
 
     enum CodingKeys: String, CodingKey {
         case model
@@ -15,6 +36,15 @@ struct ChatCompletionRequest: Encodable {
         case topP = "top_p"
         case maxTokens = "max_tokens"
         case stream
+        case chatTemplateKwargs = "chat_template_kwargs"
+    }
+}
+
+struct ChatTemplateKwargs: Encodable {
+    let enableThinking: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case enableThinking = "enable_thinking"
     }
 }
 
@@ -98,6 +128,7 @@ enum TranslationError: LocalizedError {
     case invalidResponse
     case emptyContent
     case httpError(statusCode: Int, message: String)
+    case missingAPIKey
 
     var errorDescription: String? {
         switch self {
@@ -111,6 +142,8 @@ enum TranslationError: LocalizedError {
             return "翻译服务返回了空结果，请检查模型输出格式。"
         case let .httpError(statusCode, message):
             return "翻译服务返回 HTTP \(statusCode)：\(message)"
+        case .missingAPIKey:
+            return "DeepSeek API Key 未配置，请在设置中填写 API Key。"
         }
     }
 }

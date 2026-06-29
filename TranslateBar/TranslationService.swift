@@ -1,5 +1,6 @@
 import Foundation
 
+
 @MainActor
 final class TranslationService: ObservableObject {
     @Published var result = ""
@@ -45,12 +46,14 @@ final class TranslationService: ObservableObject {
 
     private func performTranslation(text: String, mode: TranslationMode, id: UUID) async {
         guard currentTranslateId == id else { return }
+        let t0 = CFAbsoluteTimeGetCurrent()
 
         isLoading = true
         errorMessage = nil
 
         do {
             let configuration = try makeConfiguration()
+            let tConfig = CFAbsoluteTimeGetCurrent()
 
             guard let endpoint = configuration.endpoint else {
                 throw TranslationError.invalidEndpoint(configuration.endpointString)
@@ -62,7 +65,8 @@ final class TranslationService: ObservableObject {
                     mode: mode,
                     configuration: configuration,
                     endpoint: endpoint,
-                    id: id
+                    id: id,
+                    tStart: t0
                 )
             } else {
                 try await performNonStreamingTranslation(
@@ -70,7 +74,8 @@ final class TranslationService: ObservableObject {
                     mode: mode,
                     configuration: configuration,
                     endpoint: endpoint,
-                    id: id
+                    id: id,
+                    tStart: t0
                 )
             }
         } catch is CancellationError {
@@ -85,32 +90,74 @@ final class TranslationService: ObservableObject {
         }
     }
 
+    // MARK: - Request Builder
+
+    private func makeRequest(
+        endpoint: URL,
+        configuration: TranslationConfiguration,
+        stream: Bool,
+        prompt: String
+    ) throws -> URLRequest {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.timeoutInterval = configuration.timeoutInterval
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        if configuration.provider == .deepseek {
+            guard let apiKey = configuration.apiKey, !apiKey.isEmpty else {
+                throw TranslationError.missingAPIKey
+            }
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        let enableThinking: Bool
+        switch configuration.provider {
+        case .local:
+            // 本地始终关闭思考
+            enableThinking = false
+        case .deepseek:
+            // DeepSeek 由用户开关控制，默认关闭
+            enableThinking = !configuration.disableThinking
+        }
+
+        let payload = ChatCompletionRequest(
+            model: configuration.model,
+            messages: [
+                ChatMessage(role: "user", content: prompt)
+            ],
+            temperature: 0.1,
+            topP: 0.6,
+            maxTokens: 4096,
+            stream: stream,
+            chatTemplateKwargs: ChatTemplateKwargs(enableThinking: enableThinking)
+        )
+
+        request.httpBody = try JSONEncoder().encode(payload)
+        return request
+    }
+
+    // MARK: - Non-Streaming
+
     private func performNonStreamingTranslation(
         text: String,
         mode: TranslationMode,
         configuration: TranslationConfiguration,
         endpoint: URL,
-        id: UUID
+        id: UUID,
+        tStart: CFAbsoluteTime
     ) async throws {
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 120
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let payload = ChatCompletionRequest(
-            model: configuration.model,
-            messages: [
-                ChatMessage(role: "user", content: makePrompt(text: text, mode: mode))
-            ],
-            temperature: 0.1,
-            topP: 0.6,
-            maxTokens: 4096,
-            stream: false
+        let t0 = CFAbsoluteTimeGetCurrent()
+        let request = try makeRequest(
+            endpoint: endpoint,
+            configuration: configuration,
+            stream: false,
+            prompt: makePrompt(text: text, mode: mode)
         )
-
-        request.httpBody = try JSONEncoder().encode(payload)
+        let tReq = CFAbsoluteTimeGetCurrent()
 
         let (data, response) = try await session.data(for: request)
+        let tNet = CFAbsoluteTimeGetCurrent()
+        let networkMs = (tNet - tReq) * 1000
         guard currentTranslateId == id else { return }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -125,6 +172,7 @@ final class TranslationService: ObservableObject {
         }
 
         let decoded = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
+        let tParse = CFAbsoluteTimeGetCurrent()
         let content = decoded.choices.first?.message?.content ?? decoded.choices.first?.text
         let translatedText = content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
@@ -136,32 +184,27 @@ final class TranslationService: ObservableObject {
         result = translatedText
     }
 
+    // MARK: - Streaming
+
     private func performStreamingTranslation(
         text: String,
         mode: TranslationMode,
         configuration: TranslationConfiguration,
         endpoint: URL,
-        id: UUID
+        id: UUID,
+        tStart: CFAbsoluteTime
     ) async throws {
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 120
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let payload = ChatCompletionRequest(
-            model: configuration.model,
-            messages: [
-                ChatMessage(role: "user", content: makePrompt(text: text, mode: mode))
-            ],
-            temperature: 0.1,
-            topP: 0.6,
-            maxTokens: 4096,
-            stream: true
+        let t0 = CFAbsoluteTimeGetCurrent()
+        let request = try makeRequest(
+            endpoint: endpoint,
+            configuration: configuration,
+            stream: true,
+            prompt: makePrompt(text: text, mode: mode)
         )
-
-        request.httpBody = try JSONEncoder().encode(payload)
+        let tReq = CFAbsoluteTimeGetCurrent()
 
         let (byteStream, response) = try await session.bytesStream(for: request)
+        let tConn = CFAbsoluteTimeGetCurrent()
         guard currentTranslateId == id else { return }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -183,6 +226,9 @@ final class TranslationService: ObservableObject {
 
         guard currentTranslateId == id else { return }
         result = ""
+        var firstToken = true
+        var firstTokenTime: CFAbsoluteTime = 0
+        var totalChars = 0
 
         for try await line in lines(from: byteStream) {
             guard currentTranslateId == id else { return }
@@ -197,12 +243,22 @@ final class TranslationService: ObservableObject {
             do {
                 let chunk = try JSONDecoder().decode(ChatCompletionChunk.self, from: jsonData)
                 if let content = chunk.choices.first?.delta?.content {
+                    if firstToken {
+                        firstTokenTime = CFAbsoluteTimeGetCurrent()
+                        let ttfb = (firstTokenTime - tReq) * 1000
+                        firstToken = false
+                    }
                     result += content
+                    totalChars += content.count
                 }
             } catch {
                 continue
             }
         }
+
+        let tEnd = CFAbsoluteTimeGetCurrent()
+        let totalMs = (tEnd - tStart) * 1000
+        let genMs = firstToken ? 0 : (tEnd - firstTokenTime) * 1000
 
         if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             guard currentTranslateId == id else { return }
@@ -240,6 +296,12 @@ final class TranslationService: ObservableObject {
 
         if configuration.model.isEmpty {
             throw TranslationError.emptyModel
+        }
+
+        if configuration.provider == .deepseek {
+            guard let apiKey = configuration.apiKey, !apiKey.isEmpty else {
+                throw TranslationError.missingAPIKey
+            }
         }
 
         return configuration
@@ -280,7 +342,11 @@ final class TranslationService: ObservableObject {
         if let urlError = error as? URLError {
             switch urlError.code {
             case .cannotConnectToHost, .notConnectedToInternet, .networkConnectionLost:
-                return "无法连接本地翻译服务，请确认 \(TranslationConfiguration.current().endpointString) 可访问。"
+                let config = TranslationConfiguration.current()
+                if config.provider == .deepseek {
+                    return "无法连接 DeepSeek 翻译服务，请检查网络、API key 或 \(config.endpointString)。"
+                }
+                return "无法连接本地翻译服务，请确认 \(config.endpointString) 可访问。"
             case .timedOut:
                 return "翻译请求超时，模型可能仍在推理或文本过长。"
             default:

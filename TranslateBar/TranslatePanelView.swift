@@ -5,13 +5,22 @@ struct TranslatePanelView: View {
     @StateObject private var service = TranslationService()
     @StateObject private var loginItemService = LoginItemService()
     @StateObject private var modelListService = ModelListService()
+    @AppStorage(TranslationConfiguration.Keys.provider) private var provider = TranslationProvider.local.rawValue
     @AppStorage(TranslationConfiguration.Keys.endpoint) private var endpoint = TranslationConfiguration.defaultEndpoint
     @AppStorage(TranslationConfiguration.Keys.model) private var model = TranslationConfiguration.defaultModel
     @AppStorage(TranslationConfiguration.Keys.streamingEnabled) private var streamingEnabled = false
+    @AppStorage(TranslationConfiguration.Keys.cloudEndpoint) private var cloudEndpoint = TranslationConfiguration.defaultCloudEndpoint
+    @AppStorage(TranslationConfiguration.Keys.cloudModel) private var cloudModel = TranslationConfiguration.defaultCloudModel
+    @AppStorage(TranslationConfiguration.Keys.cloudAPIKey) private var cloudAPIKey = ""
+    @AppStorage(TranslationConfiguration.Keys.cloudDisableThinking) private var cloudDisableThinking = TranslationConfiguration.defaultCloudDisableThinking
     @State private var inputText = ""
     @State private var mode: TranslationMode = .auto
     @State private var autoTranslate = true
     @State private var showsSettings = false
+
+    private var currentProvider: TranslationProvider {
+        TranslationProvider(rawValue: provider) ?? .local
+    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
@@ -81,12 +90,74 @@ struct TranslatePanelView: View {
                 Button("恢复默认") {
                     endpoint = TranslationConfiguration.defaultEndpoint
                     model = TranslationConfiguration.defaultModel
+                    cloudEndpoint = TranslationConfiguration.defaultCloudEndpoint
+                    cloudModel = TranslationConfiguration.defaultCloudModel
+                    cloudDisableThinking = TranslationConfiguration.defaultCloudDisableThinking
+                    // 不自动清空 API key
                     service.cancel()
                     service.errorMessage = nil
                 }
                 .buttonStyle(.plain)
             }
 
+            // Provider 选择
+            VStack(alignment: .leading, spacing: 4) {
+                Text("翻译服务")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("", selection: $provider) {
+                    ForEach(TranslationProvider.allCases) { p in
+                        Text(p.displayName).tag(p.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: provider) { _, _ in
+                    service.cancel()
+                    service.errorMessage = nil
+                }
+            }
+
+            if currentProvider == .local {
+                localSettings
+            } else {
+                deepseekSettings
+            }
+
+            Divider()
+
+            HStack {
+                Toggle("登录时启动", isOn: Binding(
+                    get: { loginItemService.isEnabled },
+                    set: { newValue in
+                        if newValue {
+                            loginItemService.enable()
+                        } else {
+                            loginItemService.disable()
+                        }
+                    }
+                ))
+                .toggleStyle(.switch)
+                .onAppear {
+                    loginItemService.refresh()
+                }
+
+                Spacer()
+
+                if let message = loginItemService.statusMessage {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+        }
+        .padding(12)
+    }
+
+    // MARK: - Local Settings
+
+    var localSettings: some View {
+        Group {
             VStack(alignment: .leading, spacing: 4) {
                 Text("服务地址")
                     .font(.caption)
@@ -151,36 +222,105 @@ struct TranslatePanelView: View {
                 .onChange(of: streamingEnabled) {
                     service.cancel()
                 }
+        }
+    }
 
-            Divider()
+    // MARK: - DeepSeek Settings
 
-            HStack {
-                Toggle("登录时启动", isOn: Binding(
-                    get: { loginItemService.isEnabled },
-                    set: { newValue in
-                        if newValue {
-                            loginItemService.enable()
+    var deepseekSettings: some View {
+        Group {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("服务地址")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField(
+                    "https://api.deepseek.com/v1/chat/completions",
+                    text: $cloudEndpoint
+                )
+                .textFieldStyle(.roundedBorder)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("模型")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 4) {
+                    if modelListService.models.isEmpty {
+                        TextField(
+                            "deepseek-v4-flash",
+                            text: $cloudModel
+                        )
+                        .textFieldStyle(.roundedBorder)
+                    } else {
+                        Picker("", selection: $cloudModel) {
+                            ForEach(modelListService.models, id: \.self) { modelId in
+                                Text(modelId).tag(modelId)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    Button {
+                        Task { await modelListService.fetchModels() }
+                    } label: {
+                        if modelListService.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.65)
                         } else {
-                            loginItemService.disable()
+                            Image(systemName: "arrow.clockwise")
                         }
                     }
-                ))
-                .toggleStyle(.switch)
-                .onAppear {
-                    loginItemService.refresh()
+                    .buttonStyle(.plain)
+                    .disabled(modelListService.isLoading)
+                    .help("刷新模型列表")
                 }
 
-                Spacer()
-
-                if let message = loginItemService.statusMessage {
-                    Text(message)
+                if let error = modelListService.errorMessage {
+                    Text(error)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
             }
+            .onAppear {
+                Task { await modelListService.fetchModels() }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("API Key")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 4) {
+                    SecureField("sk-...", text: $cloudAPIKey)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button {
+                        cloudAPIKey = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(cloudAPIKey.isEmpty)
+                    .help("清除 API Key")
+                }
+
+                Text(cloudAPIKey.isEmpty ? "未检测到 API Key" : "已检测到 API Key")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Toggle("流式输出", isOn: $streamingEnabled)
+                .toggleStyle(.switch)
+                .onChange(of: streamingEnabled) {
+                    service.cancel()
+                }
+
+            Toggle("关闭思考", isOn: $cloudDisableThinking)
+                .toggleStyle(.switch)
         }
-        .padding(12)
     }
 
     // MARK: - Input Area

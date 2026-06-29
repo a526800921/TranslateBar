@@ -23,6 +23,7 @@
 | [install-cleanup-and-login-item](plans/install-cleanup-and-login-item.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0](plans/install-cleanup-and-login-item.md#step-0-证据)，[完成标准](plans/install-cleanup-and-login-item.md#完成标准)，[测试覆盖率](plans/install-cleanup-and-login-item.md#测试覆盖率) |
 | [model-list-selection](plans/model-list-selection.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0](plans/model-list-selection.md#step-0-证据)，[完成标准](plans/model-list-selection.md#完成标准)，[测试覆盖率](plans/model-list-selection.md#测试覆盖率) |
 | [streaming-translation](plans/streaming-translation.md) | 已完成 | Phase 0-3 已完成 | service-settings-and-install | [Step 0](plans/streaming-translation.md#step-0-证据)，[完成标准](plans/streaming-translation.md#完成标准)，[测试覆盖率](plans/streaming-translation.md#测试覆盖率) |
+| [deepseek-cloud-support-implementation](plans/deepseek-cloud-support-implementation.md) | 已完成 | 全部实施完成 | streaming-translation, model-list-selection | [Step 0](plans/deepseek-cloud-support-implementation.md#实施目标)，[完成条件](plans/deepseek-cloud-support-implementation.md#完成条件)，[测试 15 用例全部通过](#验证命令) |
 | [unit-test-coverage](plans/unit-test-coverage.md) | 已完成 | Phase 0-3 已完成 | translatebar-v1, service-settings-and-install, install-cleanup-and-login-item, model-list-selection, streaming-translation | [Step 0](plans/unit-test-coverage.md#step-0-证据)，[完成标准](plans/unit-test-coverage.md#完成标准)，[测试覆盖率](plans/unit-test-coverage.md#测试覆盖率) |
 
 允许的状态值：`候选`、`设计中`、`待实施`、`实施中`、`已完成`、`已替代`、`已合并`、`已废弃`。
@@ -35,6 +36,7 @@
 4. `model-list-selection`
 5. `streaming-translation`
 6. `unit-test-coverage`
+7. `deepseek-cloud-support-implementation`
 
 ## 依赖关系
 
@@ -52,6 +54,8 @@
 | unit-test-coverage | install-cleanup-and-login-item | 测试覆盖需要覆盖登录项服务和设置区开关行为。 |
 | unit-test-coverage | model-list-selection | 测试覆盖需要覆盖 `/v1/models` 解析、错误路径和模型选择相关状态。 |
 | unit-test-coverage | streaming-translation | 测试覆盖需要覆盖 SSE chunk 解码、流式成功路径、keepalive 跳过和非流式 fallback。 |
+| deepseek-cloud-support-implementation | streaming-translation | DeepSeek 支持复用已实现的流式/非流式双路径、模型列表服务和错误显示框架。 |
+| deepseek-cloud-support-implementation | model-list-selection | DeepSeek 模型列表读取依赖已实现的 `/v1/models` 解析和 Picker 选择组件。 |
 
 ## 替换、合并与废弃
 
@@ -63,6 +67,7 @@
 | install-cleanup-and-login-item | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 规范后续构建安装流程，避免 Launchpad 重复项，并补上登录项/开机自启动。 |
 | model-list-selection | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 将模型路径手动输入扩展为从 `/v1/models` 读取和选择。 |
 | streaming-translation | 扩展 | [service-settings-and-install](plans/service-settings-and-install.md) | 将非流式翻译扩展为可选流式输出。 |
+| deepseek-cloud-support-implementation | 扩展 | [streaming-translation](plans/streaming-translation.md) | 将本地单 provider 架构扩展为多 provider（本地 + DeepSeek 云端），复用流式/非流式双路径和模型列表组件。 |
 | unit-test-coverage | 来源 | [superpowers 单元测试覆盖率设计](superpowers/specs/2026-06-27-unit-test-coverage-design.md) | 将 superpowers 中的 90%+ 单元测试覆盖率功能计划合并进治理体系。 |
 
 ## 当前阻塞项
@@ -88,4 +93,5 @@
 | install-cleanup-and-login-item | [Step 0](plans/install-cleanup-and-login-item.md#step-0-证据)，[完成标准](plans/install-cleanup-and-login-item.md#完成标准)，[测试覆盖率](plans/install-cleanup-and-login-item.md#测试覆盖率) |
 | model-list-selection | [Step 0](plans/model-list-selection.md#step-0-证据)，[完成标准](plans/model-list-selection.md#完成标准)，[测试覆盖率](plans/model-list-selection.md#测试覆盖率) |
 | streaming-translation | [Step 0](plans/streaming-translation.md#step-0-证据)，[完成标准](plans/streaming-translation.md#完成标准)，[测试覆盖率](plans/streaming-translation.md#测试覆盖率) |
+| deepseek-cloud-support-implementation | [实施目标](plans/deepseek-cloud-support-implementation.md#实施目标)，[完成条件](plans/deepseek-cloud-support-implementation.md#完成条件) |
 | unit-test-coverage | [Step 0](plans/unit-test-coverage.md#step-0-证据)，[完成标准](plans/unit-test-coverage.md#完成标准)，[测试覆盖率](plans/unit-test-coverage.md#测试覆盖率) |

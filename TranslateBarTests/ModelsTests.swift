@@ -11,7 +11,8 @@ final class ModelsTests: XCTestCase {
             temperature: 0.1,
             topP: 0.6,
             maxTokens: 4096,
-            stream: false
+            stream: false,
+            chatTemplateKwargs: nil
         )
         let data = try JSONEncoder().encode(request)
         let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -24,7 +25,7 @@ final class ModelsTests: XCTestCase {
 
     func test_requestEncode_streamTrue() throws {
         let request = ChatCompletionRequest(
-            model: "m", messages: [], temperature: 0, topP: 1, maxTokens: 100, stream: true
+            model: "m", messages: [], temperature: 0, topP: 1, maxTokens: 100, stream: true, chatTemplateKwargs: nil
         )
         let data = try JSONEncoder().encode(request)
         let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -34,7 +35,7 @@ final class ModelsTests: XCTestCase {
     func test_requestEncode_messagesNested() throws {
         let msg = ChatMessage(role: "system", content: "You are a translator.")
         let request = ChatCompletionRequest(
-            model: "m", messages: [msg], temperature: 0, topP: 1, maxTokens: 100, stream: false
+            model: "m", messages: [msg], temperature: 0, topP: 1, maxTokens: 100, stream: false, chatTemplateKwargs: nil
         )
         let data = try JSONEncoder().encode(request)
         let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -122,6 +123,55 @@ final class ModelsTests: XCTestCase {
         let json = #"{"choices":[{"delta":{"content":""},"finish_reason":"length"}]}"#
         let chunk = try JSONDecoder().decode(ChatCompletionChunk.self, from: json.data(using: .utf8)!)
         XCTAssertEqual(chunk.choices.first?.finishReason, "length")
+    }
+
+    // MARK: - ChatTemplateKwargs
+
+    func test_requestEncode_withDisableThinking() throws {
+        let request = ChatCompletionRequest(
+            model: "m",
+            messages: [ChatMessage(role: "user", content: "hi")],
+            temperature: 0,
+            topP: 1,
+            maxTokens: 100,
+            stream: false,
+            chatTemplateKwargs: ChatTemplateKwargs(enableThinking: false)
+        )
+        let data = try JSONEncoder().encode(request)
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let kwargs = dict?["chat_template_kwargs"] as? [String: Any]
+        XCTAssertEqual(kwargs?["enable_thinking"] as? Bool, false)
+    }
+
+    func test_requestEncode_disableThinkingUsesSnakeCase() throws {
+        let kwargs = ChatTemplateKwargs(enableThinking: true)
+        let data = try JSONEncoder().encode(kwargs)
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        // snake_case key should be "enable_thinking", not "enableThinking"
+        XCTAssertEqual(dict?["enable_thinking"] as? Bool, true)
+        XCTAssertNil(dict?["enableThinking"])
+    }
+
+    // MARK: - TranslationProvider
+
+    func test_translationProvider_rawValues() {
+        XCTAssertEqual(TranslationProvider.local.rawValue, "local")
+        XCTAssertEqual(TranslationProvider.deepseek.rawValue, "deepseek")
+    }
+
+    func test_translationProvider_displayNames() {
+        XCTAssertEqual(TranslationProvider.local.displayName, "本地")
+        XCTAssertEqual(TranslationProvider.deepseek.displayName, "DeepSeek")
+    }
+
+    func test_translationProvider_allCases() {
+        XCTAssertEqual(TranslationProvider.allCases.count, 2)
+    }
+
+    func test_translationProvider_idEqualsRawValue() {
+        for provider in TranslationProvider.allCases {
+            XCTAssertEqual(provider.id, provider.rawValue)
+        }
     }
 
     // MARK: - TranslationMode

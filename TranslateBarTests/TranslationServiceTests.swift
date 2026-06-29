@@ -14,15 +14,20 @@ final class TranslationServiceTests: XCTestCase {
         service = TranslationService(session: mockSession)
         cancellables.removeAll()
         // 设置 UserDefaults.standard
+        UserDefaults.standard.set("local", forKey: TranslationConfiguration.Keys.provider)
         UserDefaults.standard.set("http://127.0.0.1:8787/v1/chat/completions", forKey: TranslationConfiguration.Keys.endpoint)
         UserDefaults.standard.set("/path/to/model", forKey: TranslationConfiguration.Keys.model)
         UserDefaults.standard.set(false, forKey: TranslationConfiguration.Keys.streamingEnabled)
     }
 
     override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.provider)
         UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.endpoint)
         UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.model)
         UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.streamingEnabled)
+        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        UserDefaults.standard.removeObject(forKey: TranslationConfiguration.Keys.cloudModel)
         mockSession = nil
         service = nil
         super.tearDown()
@@ -339,6 +344,173 @@ final class TranslationServiceTests: XCTestCase {
         await fulfillment(of: [exp], timeout: 5)
 
         XCTAssertNotNil(service.errorMessage)
+    }
+
+    // MARK: - DeepSeek non-streaming
+
+    func test_deepseekNonStreaming_addsAuthorizationHeader() async {
+        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        UserDefaults.standard.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
+        UserDefaults.standard.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
+
+        let responseJSON = #"{"choices":[{"message":{"role":"assistant","content":"Hello"}}]}"#
+        mockSession.mockData = responseJSON.data(using: .utf8)
+        mockSession.mockResponse = MockURLSession.successResponse(url: URL(string: "https://api.deepseek.com/v1/chat/completions")!)
+
+        let exp = expectation(description: "translation completes")
+        service.$result
+            .dropFirst()
+            .sink { result in
+                if result == "Hello" { exp.fulfill() }
+            }
+            .store(in: &cancellables)
+
+        service.translate(text: "你好", mode: .zhToEn)
+        await fulfillment(of: [exp], timeout: 5)
+
+        let lastRequest = mockSession.lastDataRequest
+        XCTAssertEqual(lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer sk-test-key")
+    }
+
+    func test_deepseekNonStreaming_disablesThinking() async {
+        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        UserDefaults.standard.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
+        UserDefaults.standard.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
+
+        let responseJSON = #"{"choices":[{"message":{"role":"assistant","content":"Hello"}}]}"#
+        mockSession.mockData = responseJSON.data(using: .utf8)
+        mockSession.mockResponse = MockURLSession.successResponse(url: URL(string: "https://api.deepseek.com/v1/chat/completions")!)
+
+        let exp = expectation(description: "translation completes")
+        service.$result
+            .dropFirst()
+            .sink { result in
+                if result == "Hello" { exp.fulfill() }
+            }
+            .store(in: &cancellables)
+
+        service.translate(text: "你好", mode: .zhToEn)
+        await fulfillment(of: [exp], timeout: 5)
+
+        let lastRequest = mockSession.lastDataRequest
+        XCTAssertNotNil(lastRequest?.httpBody)
+        let body = try! JSONSerialization.jsonObject(with: lastRequest!.httpBody!) as? [String: Any]
+        let kwargs = body?["chat_template_kwargs"] as? [String: Any]
+        XCTAssertEqual(kwargs?["enable_thinking"] as? Bool, false)
+    }
+
+    // MARK: - DeepSeek streaming
+
+    func test_deepseekStreaming_addsAuthorizationHeader() async {
+        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        UserDefaults.standard.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
+        UserDefaults.standard.set("sk-test-key", forKey: TranslationConfiguration.Keys.cloudAPIKey)
+        UserDefaults.standard.set(true, forKey: TranslationConfiguration.Keys.streamingEnabled)
+
+        let lines = [
+            #"data: {"choices":[{"delta":{"content":"Hi"},"finish_reason":null}]}"#,
+            "data: [DONE]",
+        ]
+        mockSession.mockBytesStream = MockURLSession.sseStream(lines: lines)
+        mockSession.mockBytesResponse = MockURLSession.successResponse(url: URL(string: "https://api.deepseek.com/v1/chat/completions")!)
+
+        let exp = expectation(description: "streaming completes")
+        service.$result
+            .dropFirst()
+            .sink { result in
+                if result == "Hi" { exp.fulfill() }
+            }
+            .store(in: &cancellables)
+
+        service.translate(text: "你好", mode: .zhToEn)
+        await fulfillment(of: [exp], timeout: 5)
+
+        let lastRequest = mockSession.lastBytesRequest
+        XCTAssertEqual(lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer sk-test-key")
+    }
+
+    // MARK: - Local request (no auth)
+
+    func test_localRequest_doesNotAddAuthorizationHeader() async {
+        // setUp already sets provider to "local"
+        let responseJSON = #"{"choices":[{"message":{"role":"assistant","content":"Hello"}}]}"#
+        mockSession.mockData = responseJSON.data(using: .utf8)
+        mockSession.mockResponse = MockURLSession.successResponse()
+
+        let exp = expectation(description: "translation completes")
+        service.$result
+            .dropFirst()
+            .sink { result in
+                if result == "Hello" { exp.fulfill() }
+            }
+            .store(in: &cancellables)
+
+        service.translate(text: "你好", mode: .zhToEn)
+        await fulfillment(of: [exp], timeout: 5)
+
+        let lastRequest = mockSession.lastDataRequest
+        XCTAssertNil(lastRequest?.value(forHTTPHeaderField: "Authorization"))
+    }
+
+    func test_localRequest_disablesThinking() async {
+        let responseJSON = #"{"choices":[{"message":{"role":"assistant","content":"Hello"}}]}"#
+        mockSession.mockData = responseJSON.data(using: .utf8)
+        mockSession.mockResponse = MockURLSession.successResponse()
+
+        let exp = expectation(description: "translation completes")
+        service.$result
+            .dropFirst()
+            .sink { result in
+                if result == "Hello" { exp.fulfill() }
+            }
+            .store(in: &cancellables)
+
+        service.translate(text: "你好", mode: .zhToEn)
+        await fulfillment(of: [exp], timeout: 5)
+
+        let lastRequest = mockSession.lastDataRequest
+        XCTAssertNotNil(lastRequest?.httpBody)
+        let body = try! JSONSerialization.jsonObject(with: lastRequest!.httpBody!) as? [String: Any]
+        let kwargs = body?["chat_template_kwargs"] as? [String: Any]
+        // 本地始终关闭思考
+        XCTAssertEqual(kwargs?["enable_thinking"] as? Bool, false)
+    }
+
+    func test_deepseekMissingAPIKey_showsReadableError() async {
+        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+        UserDefaults.standard.set("deepseek-v4-flash", forKey: TranslationConfiguration.Keys.cloudModel)
+        // 不设置 API key
+
+        let exp = expectation(description: "error received")
+        service.$errorMessage
+            .dropFirst()
+            .compactMap { $0 }
+            .sink { message in
+                if message.contains("API Key") { exp.fulfill() }
+            }
+            .store(in: &cancellables)
+
+        service.translate(text: "你好", mode: .zhToEn)
+        await fulfillment(of: [exp], timeout: 5)
+
+        XCTAssertNotNil(service.errorMessage)
+        XCTAssertTrue(service.errorMessage?.contains("API Key 未配置") ?? false)
+    }
+
+    // MARK: - readableError (provider-aware)
+
+    func test_readableError_deepseekCannotConnect() {
+        UserDefaults.standard.set("deepseek", forKey: TranslationConfiguration.Keys.provider)
+        UserDefaults.standard.set("https://api.deepseek.com/v1/chat/completions", forKey: TranslationConfiguration.Keys.cloudEndpoint)
+
+        let error = URLError(.cannotConnectToHost)
+        let message = service.readableError(error)
+        XCTAssertTrue(message.contains("DeepSeek"))
+        XCTAssertTrue(message.contains("API key"))
     }
 
     // MARK: - URLSession protocol extension (covers URLSessionProtocol.swift)

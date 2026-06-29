@@ -17,7 +17,13 @@ final class MockURLSession: URLSessionProtocol {
     /// bytesStream(for:) 的预设抛出错误
     var mockBytesError: Error?
 
+    /// 最近一次 data(for:) 收到的请求，便于断言 header/body
+    var lastDataRequest: URLRequest?
+    /// 最近一次 bytesStream(for:) 收到的请求，便于断言 header/body
+    var lastBytesRequest: URLRequest?
+
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        lastDataRequest = request
         if let error = mockError {
             throw error
         }
@@ -33,6 +39,7 @@ final class MockURLSession: URLSessionProtocol {
     }
 
     func bytesStream(for request: URLRequest) async throws -> (AsyncThrowingStream<UInt8, any Error>, URLResponse) {
+        lastBytesRequest = request
         if let error = mockBytesError {
             throw error
         }
